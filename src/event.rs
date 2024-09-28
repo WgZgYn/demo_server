@@ -24,15 +24,16 @@ pub struct PostTask {
 
 pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpResponse {
     let id = &msg.account.username;
-    let tasks = data
+    let mut tasks = data
         .event
-        .read()
+        .write()
         .expect("event not read");
 
-    if let Some(tasks) = tasks.get(id) {
+    if let Some(tasks) = tasks.get_mut(id) {
+        let v: Vec<Task> = tasks.drain(..).collect();
         HttpResponse::Ok().json(json!(
             {
-                "tasks": tasks,
+                "tasks": v,
                 "status": "ok",
                 "action": "get_task"
             }
