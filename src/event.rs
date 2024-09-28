@@ -28,10 +28,7 @@ pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpRespo
         .read()
         .expect("event not read");
 
-    let tasks = tasks
-        .get(id);
-
-    if let Some(tasks) = tasks {
+    if let Some(tasks) = tasks.get(id) {
         HttpResponse::Ok().json(json!(
             {
                 "tasks": tasks,
@@ -45,7 +42,7 @@ pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpRespo
 }
 
 pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpResponse {
-    let id = msg.account.user_id;
+    let id = msg.account.user_id.clone();
     let task = msg.into_inner().task;
     data.event
         .write()

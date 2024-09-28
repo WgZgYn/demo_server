@@ -3,8 +3,8 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, Hash, PartialEq)]
-pub struct UserId(usize);
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, Hash, PartialEq)]
+pub struct UserId(String); // This is the device's MAC address
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
@@ -27,7 +27,7 @@ pub struct AccountQuery {
 
 pub async fn post_account(data: web::Data<DB>, msg: web::Json<AccountQuery>) -> HttpResponse {
     println!("{:?}", msg.0);
-    let id = msg.account.user_id;
+    let id = msg.account.user_id.clone();
     match msg.action {
         AccountAction::Create => {
             let mut guard = data.users.write().unwrap();
