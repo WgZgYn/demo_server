@@ -3,11 +3,12 @@ use crate::db::DB;
 use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use crate::device::DeviceId;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Task {
     action: String,
-    device_id: usize,
+    device_id: DeviceId,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,7 +23,7 @@ pub struct PostTask {
 }
 
 pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpResponse {
-    let id = &msg.account.user_id;
+    let id = &msg.account.username;
     let tasks = data
         .event
         .read()
@@ -37,12 +38,12 @@ pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpRespo
             }
         ))
     } else {
-        HttpResponse::Ok().json(json!({ "status": "error" }))
+        HttpResponse::NotFound().finish()
     }
 }
 
 pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpResponse {
-    let id = msg.account.user_id.clone();
+    let id = msg.account.username.clone();
     let task = msg.into_inner().task;
     data.event
         .write()

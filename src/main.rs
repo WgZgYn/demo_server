@@ -2,6 +2,7 @@ mod account;
 mod db;
 mod event;
 mod ping;
+mod device;
 
 use crate::db::DB;
 use crate::ping::ping;
@@ -11,6 +12,7 @@ use serde_json::json;
 use std::borrow::Cow;
 use std::sync::Mutex;
 use crate::account::{get_account, post_account};
+use crate::device::get_device;
 use crate::event::{get_task, post_task};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -50,6 +52,8 @@ async fn main() -> std::io::Result<()> {
 
             .route("/account", web::post().to(post_account))
             .route("/account", web::get().to(get_account))
+
+            .route("/device", web::get().to(get_device))
 
             .route("/message", web::get().to(get_message))
             .route("/message", web::post().to(post_message))

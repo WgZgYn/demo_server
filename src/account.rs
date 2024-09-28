@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, Hash, PartialEq)]
-pub struct UserId(String); // This is the device's MAC address
+pub struct Username(String);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
-    pub user_id: UserId,
+    pub username: Username,
     password_hash: String,
 }
 
@@ -27,7 +27,7 @@ pub struct AccountQuery {
 
 pub async fn post_account(data: web::Data<DB>, msg: web::Json<AccountQuery>) -> HttpResponse {
     println!("{:?}", msg.0);
-    let id = msg.account.user_id.clone();
+    let id = msg.account.username.clone();
     match msg.action {
         AccountAction::Create => {
             let mut guard = data.users.write().unwrap();
