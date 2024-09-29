@@ -4,7 +4,7 @@ use crate::account::Account;
 use crate::db::DB;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceId(String);
+pub struct DeviceId(pub String);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Device {

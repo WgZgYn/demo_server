@@ -14,7 +14,8 @@ pub async fn ping(data: web::Data<Mutex<i32>>) -> HttpResponse {
 }
 
 // pub async fn test() -> HttpResponse {}
-pub async fn test_task(data: web::Data<DB>, web::Path((id, ops)): web::Path<(String, String)>) -> HttpResponse {
+pub async fn test_task(data: web::Data<DB>, path: web::Path<(String, String)>) -> HttpResponse {
+    let (id, ops) = path.into_inner();
     let mut g = data.event.write().expect("Failed to lock devices");
     g.entry(Username("wzy".to_string())).or_default().push(Task::new(ops, DeviceId(id)));
     HttpResponse::Ok().json(json!({"status": "ok"}))

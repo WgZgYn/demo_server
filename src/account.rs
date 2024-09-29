@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, Hash, PartialEq)]
-pub struct Username(String);
+pub struct Username(pub String);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
