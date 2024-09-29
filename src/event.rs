@@ -11,6 +11,12 @@ pub struct Task {
     device_id: DeviceId,
 }
 
+impl Task {
+    pub fn new(action: String, device_id: DeviceId) -> Self {
+        Task { action, device_id }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct GetTask {
     account: Account,

@@ -1,11 +1,10 @@
 mod account;
 mod db;
 mod event;
-mod ping;
 mod device;
+mod test;
 
 use crate::db::DB;
-use crate::ping::ping;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -14,6 +13,7 @@ use std::sync::Mutex;
 use crate::account::{get_account, post_account};
 use crate::device::get_device;
 use crate::event::{get_task, post_task};
+use crate::test::{ping, test_task};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Message {
@@ -54,6 +54,8 @@ async fn main() -> std::io::Result<()> {
             .route("/account", web::get().to(get_account))
 
             .route("/device", web::get().to(get_device))
+
+            .route("/device/{id}/{ops}", web::get().to(test_task))
 
             .route("/message", web::get().to(get_message))
             .route("/message", web::post().to(post_message))
