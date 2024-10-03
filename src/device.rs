@@ -1,7 +1,7 @@
-use actix_web::{web, HttpResponse};
-use serde::{Deserialize, Serialize};
 use crate::account::Account;
 use crate::db::DB;
+use actix_web::{web, HttpResponse};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceId(pub String);
@@ -13,7 +13,7 @@ pub struct Device {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetDevice {
-    account: Account
+    account: Account,
 }
 
 pub async fn get_device(data: web::Data<DB>, msg: web::Json<GetDevice>) -> HttpResponse {
