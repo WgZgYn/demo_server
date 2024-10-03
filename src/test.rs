@@ -3,17 +3,27 @@ use serde_json::{json, Value};
 use std::sync::Mutex;
 
 pub async fn ping(data: web::Data<Mutex<i32>>) -> HttpResponse {
-    let mut v = data.lock().unwrap();
-    *v += 1;
-    println!("ping {}", *v);
-    HttpResponse::Ok().json(json!({"status": "ok", "times": *v}))
+    match data.lock() {
+        Ok(mut v) => {
+            *v += 1;
+            println!("ping {}", *v);
+            HttpResponse::Ok().json(json!({"status": "ok", "times": *v}))
+        }
+        Err(_) => HttpResponse::InternalServerError().json(json!({"status": "error"})),
+    }
 }
 
-// pub async fn test() -> HttpResponse {}
 pub async fn test_task(path: web::Path<(String, String)>) -> HttpResponse  {
     let (id, ops) = path.into_inner();
+    if let Ok(json)= send(id,ops).await {
+        HttpResponse::Ok().json(json)
+    } else {
+        HttpResponse::InternalServerError().finish()
+    }
+}
 
-    let json: Value = reqwest::Client::new()
+async fn send(id: String, ops: String) -> reqwest::Result<Value> {
+    reqwest::Client::new()
         .post("http://localhost:8080/task")
         .header("Content-Type", "application/json")
         .body(json!(
@@ -28,8 +38,6 @@ pub async fn test_task(path: web::Path<(String, String)>) -> HttpResponse  {
                 }
             }
         ).to_string())
-        .send().await.expect("failed to send request")
-        .json().await.expect("failed to read response");
-
-    HttpResponse::Ok().json(json)
+        .send().await?
+        .json().await
 }

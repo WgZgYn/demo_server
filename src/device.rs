@@ -18,10 +18,11 @@ pub struct GetDevice {
 
 pub async fn get_device(data: web::Data<DB>, msg: web::Json<GetDevice>) -> HttpResponse {
     let id = &msg.account.username;
-    let d = data.devices.read().expect("read error");
-    if let Some(devices) = d.get(id) {
-        HttpResponse::Ok().json(devices)
-    } else {
-        HttpResponse::NotFound().finish()
+    match data.devices.read() {
+        Ok(d) => match d.get(&id) {
+            Some(d) => HttpResponse::Ok().json(d),
+            None => HttpResponse::NotFound().body("Device not found for account"),
+        },
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

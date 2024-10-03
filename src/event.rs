@@ -30,7 +30,10 @@ pub struct PostTask {
 
 pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpResponse {
     let id = &msg.account.username;
-    let mut tasks = data.event().write().expect("event not read");
+    let mut tasks = match data.event().write() {
+        Ok(tasks) => tasks,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
 
     if let Some(tasks) = tasks.get_mut(id) {
         let v: Vec<Task> = tasks.drain(..).collect();
@@ -49,30 +52,49 @@ pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpRespo
 pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpResponse {
     println!("POST task");
 
+    let msg = msg.into_inner();
+    let task = msg.task;
+
+    // 尝试写入事件，返回错误时返回 500 响应
+    let mut events = match data.event().write() {
+        Ok(events) => events,
+        Err(_) => return HttpResponse::InternalServerError().json(json!({
+            "status": "error",
+            "message": "Failed to write event"
+        })),
+    };
+
+
     let id = msg.account.username.clone();
-    let task = msg.into_inner().task;
+    events.entry(id).or_default().push(task);
 
-    data.event()
-        .write()
-        .expect("Failed to write event")
-        .entry(id.clone())
-        .or_default()
-        .push(task);
+    // 尝试读取连接，返回错误时返回 500 响应
+    let mut conn = match data.conn.write() {
+        Ok(conn) => conn,
+        Err(_) => return HttpResponse::InternalServerError().json(json!({
+            "status": "error",
+            "message": "Failed to read connection"
+        })),
+    };
 
-    let mut ss = data.conn.write().expect("Failed to write connection");
 
-    let ss = ss.entry(id).or_default();
-
-    // TODO: remove the disconnect sender
-    for s in ss {
-        println!("send update to sse");
-        s.send(SSEMessage::new("update")).await.expect("can't send");
+    if let Some(senders) = conn.get_mut(&msg.account.username) {
+        let n = senders.len();
+        for i in 0..n {
+            match senders[i].send(SSEMessage::new("update")).await {
+                Ok(_) => {
+                    println!("SSE message sent");
+                }
+                Err(_) => {
+                    println!("one sender is disconnected");
+                    senders.swap_remove(i); // Then remove the connection
+                }
+            }
+        }
     }
 
-    HttpResponse::Ok().json(json!(
-        {
-            "status": "ok",
-            "action": "post_task"
-        }
-    ))
+    HttpResponse::Ok().json(json!({
+        "status": "ok",
+        "action": "post_task"
+    }))
 }

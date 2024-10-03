@@ -30,8 +30,16 @@ pub async fn post_account(data: web::Data<DB>, msg: web::Json<AccountQuery>) -> 
     let id = msg.account.username.clone();
     match msg.action {
         AccountAction::Create => {
-            let mut guard = data.users.write().unwrap();
-            guard.insert(id, msg.account.clone());
+            match data.users.write() {
+                Ok(mut users) => {
+                    users.insert(id, msg.account.clone());
+                }
+                Err(err) => {
+                    println!("{:#?}", err);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            }
+
         }
         AccountAction::Update => {}
         AccountAction::Delete => {}
@@ -44,5 +52,9 @@ pub async fn post_account(data: web::Data<DB>, msg: web::Json<AccountQuery>) -> 
 }
 
 pub async fn get_account(data: web::Data<DB>) -> HttpResponse {
-    HttpResponse::Ok().json(&*data.users.read().expect("read error"))
+    if let Ok(s) = data.users.read() {
+        HttpResponse::Ok().json(&*s)
+    } else {
+        HttpResponse::InternalServerError().finish()
+    }
 }
