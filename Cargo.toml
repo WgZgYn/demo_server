@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4"
+actix-web = { version = "4", features = ["openssl"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.128"
 log = "0.4.22"
@@ -13,3 +13,6 @@ tokio = { version = "1.40.0", features = ["full"] }
 async-stream = "0.3.6"
 actix-cors = "0.7.0"
 reqwest = { version = "0.12.8", features = ["json"] }
+rustls = "0.23.14"
+openssl = "0.10.66"
+actix-files = "0.6.6"

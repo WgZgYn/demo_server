@@ -4,6 +4,7 @@ mod device;
 mod event;
 mod sse;
 mod test;
+mod web_page;
 
 use crate::account::{get_account, post_account};
 use crate::db::DB;
@@ -17,6 +18,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::borrow::Cow;
 use std::sync::Mutex;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use crate::web_page::vue;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Message {
@@ -40,13 +43,20 @@ async fn post_message(msg: web::Json<Message>) -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // 配置证书信息
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
+    builder.set_private_key_file("private.key", SslFiletype::PEM)?;
+    builder.set_certificate_chain_file("cert.pem")?;
+
+    // 内存共享数据
     let counter = web::Data::new(Mutex::new(0));
     let db = web::Data::new(DB::default());
 
     HttpServer::new(move || {
         let counter = counter.clone();
         App::new()
-            .wrap(Cors::permissive())
+            .wrap(Cors::permissive()) // DEV only
+            .service(vue()) // Put VUE package to /static
             .app_data(counter.clone())
             .app_data(db.clone())
             .route("/ping", web::get().to(ping))
@@ -60,7 +70,8 @@ async fn main() -> std::io::Result<()> {
             .route("/message", web::post().to(post_message))
             .route("/sse", web::get().to(sse_handler))
     })
-    .bind("0.0.0.0:8080")?
-    .run()
-    .await
+        .bind("0.0.0.0:80")?
+        .bind_openssl("0.0.0.0:443", builder)?
+        .run()
+        .await
 }

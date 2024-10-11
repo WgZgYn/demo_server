@@ -5,7 +5,6 @@ use actix_web::{web, HttpResponse};
 // type SseStream = Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>>>>;
 
 
-// TODO: Path Args to specify
 pub async fn sse_handler(data: web::Data<DB>) -> HttpResponse {
     let (tx, mut rx) = tokio::sync::mpsc::channel::<SSEMessage>(32);
 

@@ -56,17 +56,19 @@ pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpRes
     let task = msg.task;
 
     // 尝试写入事件，返回错误时返回 500 响应
-    let mut events = match data.event().write() {
-        Ok(events) => events,
-        Err(_) => return HttpResponse::InternalServerError().json(json!({
-            "status": "error",
-            "message": "Failed to write event"
-        })),
-    };
+    {
+        let mut events = match data.event().write() {
+            Ok(events) => events,
+            Err(_) => return HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": "Failed to write event"
+            }))
+        };
 
 
-    let id = msg.account.username.clone();
-    events.entry(id).or_default().push(task);
+        let id = msg.account.username.clone();
+        events.entry(id).or_default().push(task);
+    }
 
     // 尝试读取连接，返回错误时返回 500 响应
     let mut conn = match data.conn.write() {

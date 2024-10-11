@@ -10,8 +10,8 @@ use tokio::sync::mpsc;
 pub struct DB {
     pub users: RwLock<HashMap<Username, Account>>,
     pub devices: RwLock<HashMap<Username, Vec<Device>>>,
-    tasks: Tasks,
     pub conn: RwLock<HashMap<Username, Vec<mpsc::Sender<SSEMessage>>>>,
+    tasks: Tasks,
 }
 
 impl DB {
@@ -38,5 +38,5 @@ impl SSEMessage {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct Tasks {
-    pub event: RwLock<HashMap<Username, Vec<Task>>>,
+    event: RwLock<HashMap<Username, Vec<Task>>>,
 }
