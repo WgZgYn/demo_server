@@ -16,3 +16,6 @@ reqwest = { version = "0.12.8", features = ["json"] }
 rustls = "0.23.14"
 openssl = "0.10.66"
 actix-files = "0.6.6"
+tokio-postgres = "0.7.12"
+serde_yaml = "0.9.34"
+deadpool-postgres = "0.14.0"

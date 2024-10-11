@@ -59,12 +59,13 @@ pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpRes
     {
         let mut events = match data.event().write() {
             Ok(events) => events,
-            Err(_) => return HttpResponse::InternalServerError().json(json!({
-                "status": "error",
-                "message": "Failed to write event"
-            }))
+            Err(_) => {
+                return HttpResponse::InternalServerError().json(json!({
+                    "status": "error",
+                    "message": "Failed to write event"
+                }))
+            }
         };
-
 
         let id = msg.account.username.clone();
         events.entry(id).or_default().push(task);
@@ -73,12 +74,13 @@ pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpRes
     // 尝试读取连接，返回错误时返回 500 响应
     let mut conn = match data.conn.write() {
         Ok(conn) => conn,
-        Err(_) => return HttpResponse::InternalServerError().json(json!({
-            "status": "error",
-            "message": "Failed to read connection"
-        })),
+        Err(_) => {
+            return HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": "Failed to read connection"
+            }))
+        }
     };
-
 
     if let Some(senders) = conn.get_mut(&msg.account.username) {
         let n = senders.len();

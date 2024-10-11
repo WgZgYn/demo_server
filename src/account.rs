@@ -29,18 +29,15 @@ pub async fn post_account(data: web::Data<DB>, msg: web::Json<AccountQuery>) -> 
     println!("{:?}", msg.0);
     let id = msg.account.username.clone();
     match msg.action {
-        AccountAction::Create => {
-            match data.users.write() {
-                Ok(mut users) => {
-                    users.insert(id, msg.account.clone());
-                }
-                Err(err) => {
-                    println!("{:#?}", err);
-                    return HttpResponse::InternalServerError().finish();
-                }
+        AccountAction::Create => match data.users.write() {
+            Ok(mut users) => {
+                users.insert(id, msg.account.clone());
             }
-
-        }
+            Err(err) => {
+                println!("{:#?}", err);
+                return HttpResponse::InternalServerError().finish();
+            }
+        },
         AccountAction::Update => {}
         AccountAction::Delete => {}
     }

@@ -4,16 +4,17 @@ use actix_web::web::Bytes;
 use actix_web::{web, HttpResponse};
 // type SseStream = Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>>>>;
 
-
 pub async fn sse_handler(data: web::Data<DB>) -> HttpResponse {
     let (tx, mut rx) = tokio::sync::mpsc::channel::<SSEMessage>(32);
 
     let mut conns = match data.conn.write() {
         Ok(c) => c,
-        Err(e) => return {
-            eprintln!("error writing conn: {}", e);
-            HttpResponse::InternalServerError().finish()
-        },
+        Err(e) => {
+            return {
+                eprintln!("error writing conn: {}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        }
     };
 
     conns
