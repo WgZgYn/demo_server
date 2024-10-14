@@ -1,17 +1,23 @@
-use crate::account::{Account, Username};
-use crate::device::Device;
-use crate::event::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
 use tokio::sync::mpsc;
+use crate::dto::account::{Account, Username};
+use crate::dto::device::Device;
+use crate::dto::sse_message::SSEMessage;
+use crate::dto::task::Task;
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct Tasks {
+    pub event: RwLock<HashMap<Username, Vec<Task>>>,
+}
 
 #[derive(Debug, Default)]
 pub struct DB {
     pub users: RwLock<HashMap<Username, Account>>,
     pub devices: RwLock<HashMap<Username, Vec<Device>>>,
     pub conn: RwLock<HashMap<Username, Vec<mpsc::Sender<SSEMessage>>>>,
-    tasks: Tasks,
+    pub tasks: Tasks,
 }
 
 impl DB {
@@ -20,23 +26,6 @@ impl DB {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct SSEMessage {
-    message: String,
-}
 
-impl SSEMessage {
-    pub fn new(message: &str) -> Self {
-        Self {
-            message: message.to_string(),
-        }
-    }
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-}
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct Tasks {
-    event: RwLock<HashMap<Username, Vec<Task>>>,
-}
+

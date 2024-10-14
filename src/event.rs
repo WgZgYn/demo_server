@@ -1,32 +1,9 @@
-use crate::account::Account;
-use crate::db::{SSEMessage, DB};
-use crate::device::DeviceId;
+use crate::db::DB;
+use crate::dto::task::{GetTask, PostTask, Task};
 use actix_web::{web, HttpResponse};
-use serde::{Deserialize, Serialize};
+use log::info;
 use serde_json::json;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Task {
-    action: String,
-    device_id: DeviceId,
-}
-
-impl Task {
-    pub fn new(action: String, device_id: DeviceId) -> Self {
-        Task { action, device_id }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct GetTask {
-    account: Account,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct PostTask {
-    pub account: Account,
-    pub task: Task,
-}
+use crate::dto::sse_message::SSEMessage;
 
 pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpResponse {
     let id = &msg.account.username;
@@ -50,7 +27,7 @@ pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpRespo
 }
 
 pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpResponse {
-    println!("POST task");
+    info!("POST task");
 
     let msg = msg.into_inner();
     let task = msg.task;
@@ -87,10 +64,10 @@ pub async fn post_task(data: web::Data<DB>, msg: web::Json<PostTask>) -> HttpRes
         for i in 0..n {
             match senders[i].send(SSEMessage::new("update")).await {
                 Ok(_) => {
-                    println!("SSE message sent");
+                    info!("SSE message sent");
                 }
                 Err(_) => {
-                    println!("one sender is disconnected");
+                    info!("one sender is disconnected");
                     senders.swap_remove(i); // Then remove the connection
                 }
             }

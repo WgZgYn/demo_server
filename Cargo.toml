@@ -5,17 +5,33 @@ edition = "2021"
 
 [dependencies]
 actix-web = { version = "4", features = ["openssl"] }
+actix-files = "0.6.6"
+actix-cors = "0.7.0"
+actix-web-httpauth = "0.8.2"
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.128"
+serde_yaml = "0.9.34"
+
 log = "0.4.22"
+env_logger = "0.11.5"
+derive_more = { version = "1.0.0", features = ["display"] }
+chrono = "0.4.38"
+
+
 futures = "0.3.30"
 tokio = { version = "1.40.0", features = ["full"] }
 async-stream = "0.3.6"
-actix-cors = "0.7.0"
+futures-util = "0.3.30"
+
 reqwest = { version = "0.12.8", features = ["json"] }
+
 rustls = "0.23.14"
 openssl = "0.10.66"
-actix-files = "0.6.6"
+
+
 tokio-postgres = "0.7.12"
-serde_yaml = "0.9.34"
 deadpool-postgres = "0.14.0"
+diesel = "2.2.4"
+
+jsonwebtoken = "9.3.0"
