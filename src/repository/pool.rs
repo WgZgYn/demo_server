@@ -16,7 +16,7 @@ pub async fn create_connection_pool() -> Result<Pool, Box<dyn std::error::Error>
     }
     let config: Config = serde_yaml::from_str::<Config>(include_str!("../../config.yaml"))?;
     info!("{:?}", &config);
-    let pass = std::env::var("DATABASE_PASSWORD").unwrap_or("".to_string());
+    let pass = std::env::var("DATABASE_PASSWORD").expect("need DATABASE_PASSWORD");
 
     let mut cfg = deadpool_postgres::Config::new();
 

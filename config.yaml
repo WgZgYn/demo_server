@@ -1,4 +1,4 @@
 database:
-  host: "localhost"
-  user: "postgres"
-  dbname: "postgres"
+  host: "47.108.27.238"
+  user: "scu301"
+  dbname: "db123"
