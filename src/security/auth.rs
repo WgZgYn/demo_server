@@ -1,12 +1,12 @@
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::{Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use actix_web_httpauth::extractors::{bearer, AuthenticationError};
 use chrono::{Duration, Utc};
 use futures_util::future::LocalBoxFuture;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
-use actix_web_httpauth::extractors::{bearer, AuthenticationError};
 
 const SECRET_KEY: &[u8] = b"AAABBBCCC123456";
 
@@ -25,12 +25,16 @@ impl Role {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    id: i32,
     sub: String,
     role: String,
     exp: usize,
 }
 
 impl Claims {
+    pub fn id(&self) -> i32 {
+        self.id
+    }
     pub fn role(&self) -> &str {
         self.role.as_str()
     }
@@ -39,15 +43,21 @@ impl Claims {
     }
 }
 
-pub fn create_token(user: String, role: Role) -> String {
+pub fn create_token(user: String, role: Role, id: i32) -> String {
     let jwt_exp = Utc::now() + Duration::hours(2);
 
     let claims = Claims {
+        id,
         sub: user,
         role: role.as_str().to_owned(),
-        exp: jwt_exp.timestamp() as usize,  // 设置过期时间
+        exp: jwt_exp.timestamp() as usize, // 设置过期时间
     };
-    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET_KEY)).unwrap();
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(SECRET_KEY),
+    )
+    .unwrap();
     token
 }
 
@@ -76,7 +86,8 @@ pub async fn validator(
     if let Ok(_) = validate_token(credentials.token()) {
         Ok(req)
     } else {
-        let config = req.app_data::<bearer::Config>()
+        let config = req
+            .app_data::<bearer::Config>()
             .cloned()
             .unwrap_or_default()
             .scope("urn:example:channel=HBO&urn:example:rating=G,PG-13");
@@ -88,7 +99,7 @@ pub struct Auth;
 
 impl<S, B> Transform<S, ServiceRequest> for Auth
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -109,7 +120,7 @@ pub struct AuthMiddleware<S> {
 
 impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -135,8 +146,8 @@ where
         // 验证 JWT
         if let Some(token) = token {
             if let Ok(token_data) = validate_token(token) {
-                req.extensions_mut().insert(token_data.claims);  // 将 Claims 存储到 req 中
-                // 如果 JWT 验证通过，继续处理请求
+                req.extensions_mut().insert(token_data.claims); // 将 Claims 存储到 req 中
+                                                                // 如果 JWT 验证通过，继续处理请求
                 let fut = self.service.call(req);
                 return Box::pin(async move {
                     let res = fut.await?;
@@ -146,11 +157,9 @@ where
         }
 
         Box::pin(async {
-            Ok::<ServiceResponse<B>, Error>(req.into_response::<B, _>(HttpResponse::Unauthorized().finish()))
+            Ok::<ServiceResponse<B>, Error>(
+                req.into_response::<B, _>(HttpResponse::Unauthorized().finish()),
+            )
         })
     }
 }
-
-
-
-

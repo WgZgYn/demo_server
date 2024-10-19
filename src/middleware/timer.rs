@@ -1,9 +1,12 @@
-use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, Error};
+use actix_web::{
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    Error,
+};
 use futures_util::future::LocalBoxFuture;
+use log::info;
 use std::future::{ready, Ready};
 use std::task::{Context, Poll};
 use std::time::Instant;
-use log::info;
 
 pub struct Timer;
 

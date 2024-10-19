@@ -6,6 +6,7 @@ use deadpool_postgres::{GenericClient, Pool};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::Index;
 use tokio_postgres::Error;
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -101,6 +102,13 @@ struct AreaDevices {
     devices: Vec<Device>,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+struct HouseDevices {
+    house_id: i32,
+    house_name: String,
+    areas_devices: Vec<AreaDevices>,
+}
+
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Hash)]
 struct House {
     house_id: i32,
@@ -109,7 +117,7 @@ struct House {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct ShowDevices {
-    areas_devices: HashMap<House, AreaDevices>,
+    houses_devices: Vec<HouseDevices>,
 }
 
 pub async fn show_devices(db: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
@@ -130,59 +138,89 @@ pub async fn show_devices(db: web::Data<Pool>, req: HttpRequest) -> HttpResponse
         }
     };
 
-    let username = claims.sub();
+    let account_id = claims.id();
     match client
         .query(
-            "SELECT h.house_id,
-        h.house_name,
-        a.area_id,
-        a.area_name,
-        d.device_id,
-        d.device_name,
-        d.efuse_mac,
-        d.chip_model,
-        dt.type_id,
-        dt.type_name
-        FROM account ac
-        JOIN member m ON ac.account_id = m.account_id
+            "
+        SELECT
+            h.house_id,
+            h.house_name,
+            a.area_id,
+            a.area_name,
+            d.device_id,
+            d.device_name,
+            d.efuse_mac,
+            d.chip_model,
+            dt.type_id,
+            dt.type_name
+        FROM member m
         JOIN house h ON m.house_id = h.house_id
         JOIN area a ON a.house_id = h.house_id
         JOIN device d ON d.area_id = a.area_id
         JOIN device_type dt ON dt.type_id = d.type_id
-        WHERE ac.username = $1;",
-            &[&username],
+        WHERE m.account_id = $1;",
+            &[&account_id],
         )
         .await
     {
         Ok(rows) => {
-            let mut ad = HashMap::new();
+            let mut ad: Vec<HouseDevices> = Vec::new();
+
             for row in rows {
-                let house_id = row.get("house_id");
+                let house_id: i32 = row.get("house_id");
                 let house_name = row.get("house_name");
 
-                ad.entry(House {
-                    house_name,
-                    house_id,
-                })
-                .or_insert(AreaDevices {
-                    area_id: row.get("area_id"),
-                    area_name: row.get("area_name"),
-                    devices: Vec::new(),
-                })
-                .devices
-                .push(Device {
-                    device_id: row.get("device_id"),
-                    device_name: row.get("device_name"),
-                    efuse_mac: row.get("efuse_mac"),
-                    chip_model: row.get("chip_model"),
-                    device_type: DeviceType {
-                        type_id: row.get("type_id"),
-                        type_name: row.get("type_name"),
-                    },
-                });
-            }
+                let area_id: i32 = row.get("area_id");
+                let area_name = row.get("area_name");
 
-            HttpResponse::Ok().json(utils::Response::success(ShowDevices { areas_devices: ad }))
+                let device_id = row.get("device_id");
+                let device_name = row.get("device_name");
+                let efuse_mac = row.get("efuse_mac");
+                let chip_model = row.get("chip_model");
+                let type_id = row.get("type_id");
+                let type_name = row.get("type_name");
+
+                if let Some(house) = ad.iter_mut().find(|h| h.house_id == house_id) {
+                    if let Some(area) = house.areas_devices.iter_mut().find(|a| a.area_name == area_name) {
+                        area.devices.push(Device {
+                            device_id,
+                            device_name,
+                            efuse_mac,
+                            chip_model,
+                            device_type: DeviceType { type_id, type_name },
+                        });
+                    } else {
+                        house.areas_devices.push(AreaDevices {
+                            area_id,
+                            area_name,
+                            devices: vec![Device {
+                                device_id,
+                                device_name,
+                                efuse_mac,
+                                chip_model,
+                                device_type: DeviceType { type_id, type_name },
+                            }],
+                        });
+                    }
+                } else {
+                    ad.push(HouseDevices {
+                        house_id,
+                        house_name,
+                        areas_devices: vec![AreaDevices {
+                            area_id,
+                            area_name,
+                            devices: vec![Device {
+                                device_id,
+                                device_name,
+                                efuse_mac,
+                                chip_model,
+                                device_type: DeviceType { type_id, type_name },
+                            }],
+                        }],
+                    });
+                }
+            }
+            HttpResponse::Ok().json(utils::Response::success(ShowDevices { houses_devices: ad }))
         }
         Err(e) => {
             error!("{e}");

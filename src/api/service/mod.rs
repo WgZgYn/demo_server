@@ -1,2 +1,2 @@
-pub mod sse;
 mod email;
+pub mod sse;

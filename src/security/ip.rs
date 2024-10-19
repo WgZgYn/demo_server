@@ -1,16 +1,16 @@
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::error::ErrorForbidden;
+use actix_web::{Error, HttpResponse};
+use futures_util::future::LocalBoxFuture;
+use log::{debug, info};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::future::{ready, Ready};
 use std::net::IpAddr;
+use std::sync::RwLock;
 use std::sync::{Arc, LockResult};
 use std::task::{Context, Poll};
 use std::time::Instant;
-use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
-use actix_web::{Error, HttpResponse};
-use futures_util::future::LocalBoxFuture;
-use log::{debug, info};
-use std::sync::RwLock;
-use actix_web::error::ErrorForbidden;
 
 #[derive(Default)]
 pub struct RecordIP {
@@ -21,7 +21,7 @@ pub struct RecordIP {
 
 impl<S, B> Transform<S, ServiceRequest> for RecordIP
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: 'static,
 {
     type Response = ServiceResponse<B>;
@@ -49,7 +49,7 @@ pub struct RecordIPMiddleware<S> {
 
 impl<S, B> Service<ServiceRequest> for RecordIPMiddleware<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: 'static,
 {
     type Response = ServiceResponse<B>;
@@ -77,7 +77,9 @@ where
             match self.whitelist.read() {
                 Ok(set) => {
                     if set.contains(&ip) {
-                        return Box::pin(async { Err(actix_web::Error::from(ErrorForbidden("IP was baned"))) });
+                        return Box::pin(async {
+                            Err(actix_web::Error::from(ErrorForbidden("IP was baned")))
+                        });
                     }
                 }
                 Err(_) => {}

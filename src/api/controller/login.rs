@@ -1,11 +1,11 @@
+use crate::security::{create_token, Role};
+use crate::utils;
+use crate::utils::{hash, Response};
 use actix_web::{web, Error, HttpResponse};
 use deadpool_postgres::{GenericClient, Pool};
 use log::{error, info};
 use serde::Deserialize;
 use serde_json::json;
-use crate::security::{Role, create_token};
-use crate::utils;
-use crate::utils::{hash, Response};
 
 // 认证登录请求结构
 #[derive(Deserialize)]
@@ -23,38 +23,50 @@ pub async fn login(req: web::Json<LoginRequest>, db: web::Data<Pool>) -> HttpRes
         Ok(client) => client,
         Err(err) => {
             error!("{}", err);
-            return HttpResponse::InternalServerError().json(utils::Result::error("database error"));
+            return HttpResponse::InternalServerError()
+                .json(utils::Result::error("database error"));
         }
     };
 
-    match client.query_one("SELECT password_hash FROM account WHERE username = $1", &[username]).await {
-        Ok(row) => {
-            let password_hash = row.get(0);
-            let ok = hash::password_verify(password_hash, password.as_ref());
-            if !ok {
-                HttpResponse::Unauthorized()
-                    .json(utils::Result::error("password error"))
-            } else {
-                match client.execute("UPDATE account SET last_login=CURRENT_TIMESTAMP WHERE username = $1", &[username]).await {
-                    Ok(i) => {
-                        info!("{i} was updated");
-                        let token = create_token(username.clone(), Role::User);
-                        HttpResponse::Ok().json(
-                            Response::success(json!({"token": token,"role":"user"}))
-                        )
-                    }
-                    Err(err) => {
-                        error!("{}", err);
-                        HttpResponse::InternalServerError().json(utils::Result::error("database error when update user's last_login"))
-                    }
-                }
-            }
-        }
-
+    let row = match client
+        .query_one(
+            "SELECT password_hash, account_id FROM account WHERE username = $1",
+            &[username],
+        )
+        .await
+    {
+        Ok(row) => row,
         Err(err) => {
             error!("{}", err);
-            HttpResponse::Unauthorized()
-                .json(utils::Result::error("no such user"))
+            return HttpResponse::Unauthorized().json(utils::Result::error("no such user"));
+        }
+    };
+
+    let password_hash = row.get(0);
+    let account_id = row.get(1);
+
+    let ok = hash::password_verify(password_hash, password.as_ref());
+    if !ok {
+        return HttpResponse::Unauthorized().json(utils::Result::error("password error"));
+    }
+
+    match client
+        .execute(
+            "UPDATE account SET last_login=CURRENT_TIMESTAMP WHERE username = $1",
+            &[username],
+        )
+        .await
+    {
+        Ok(i) => {
+            info!("{i} was updated");
+            let token = create_token(username.clone(), Role::User, account_id);
+            HttpResponse::Ok().json(Response::success(json!({"token": token,"role":"user"})))
+        }
+        Err(err) => {
+            error!("{}", err);
+            HttpResponse::InternalServerError().json(utils::Result::error(
+                "database error when update user's last_login",
+            ))
         }
     }
 }

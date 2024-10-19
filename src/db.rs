@@ -1,11 +1,11 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::RwLock;
-use tokio::sync::mpsc;
 use crate::dto::account::{Account, Username};
 use crate::dto::device::Device;
 use crate::dto::sse_message::SSEMessage;
 use crate::dto::task::Task;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use tokio::sync::mpsc;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct Tasks {
@@ -25,7 +25,3 @@ impl DB {
         &self.tasks.event
     }
 }
-
-
-
-

@@ -27,7 +27,7 @@ async fn send(id: String, ops: String) -> reqwest::Result<Value> {
                     }
                 }
             )
-                .to_string(),
+            .to_string(),
         )
         .send()
         .await?

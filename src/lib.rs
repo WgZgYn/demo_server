@@ -1,13 +1,13 @@
+pub mod api;
 pub mod db;
 pub mod device;
-pub mod event;
-pub mod api;
-pub mod web_page;
 pub mod dto;
-pub mod utils;
+pub mod event;
 pub mod repository;
+pub mod utils;
+pub mod web_page;
 
-pub mod security;
 pub mod errors;
+pub mod security;
 
 pub mod middleware;

@@ -1,11 +1,11 @@
-use std::time::Duration;
 use crate::db::DB;
+use crate::dto::account::Username;
+use crate::dto::SSEMessage;
 use actix_web::web::Bytes;
 use actix_web::{web, HttpResponse};
 use log::{error, info};
+use std::time::Duration;
 use tokio::time::sleep;
-use crate::dto::account::Username;
-use crate::dto::SSEMessage;
 
 pub async fn sse_handler(data: web::Data<DB>) -> HttpResponse {
     let (tx, mut rx) = tokio::sync::mpsc::channel::<SSEMessage>(32);
@@ -37,7 +37,6 @@ pub async fn sse_handler(data: web::Data<DB>) -> HttpResponse {
         .content_type("text/event-stream")
         .streaming(server_events)
 }
-
 
 // pub async fn sse_test() -> HttpResponse {
 //     let server_events = async_stream::stream! {

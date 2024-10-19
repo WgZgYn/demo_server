@@ -10,7 +10,11 @@ pub struct Result<'a> {
 
 impl<'a> Result<'a> {
     pub fn new(code: i32, message: &'a str) -> Result<'a> {
-        Self { code, message, timestamp: get_timestamp() }
+        Self {
+            code,
+            message,
+            timestamp: get_timestamp(),
+        }
     }
 
     pub fn success() -> Result<'a> {
@@ -27,12 +31,17 @@ pub struct Response<'a, T> {
     code: i32,
     message: &'a str,
     timestamp: u64,
-    data: Option<T>
+    data: Option<T>,
 }
 
 impl<'a, T> Response<'a, T> {
     pub fn new(code: i32, message: &'a str, data: Option<T>) -> Response<'a, T> {
-        Self { code, message, timestamp: get_timestamp(), data }
+        Self {
+            code,
+            message,
+            timestamp: get_timestamp(),
+            data,
+        }
     }
 
     pub fn success(data: T) -> Response<'a, T> {
