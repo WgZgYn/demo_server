@@ -1,6 +1,6 @@
-use demo_server::api::controller::{add_area, add_device, add_house, login, show_devices, signup};
+use demo_server::api::controller::{add_area, add_device, add_house, login, login_token, show_devices, signup};
 use demo_server::api::service::sse::{sse_handler, sse_test};
-use demo_server::api::test::{ping, test_auth, test_get_account, test_task};
+use demo_server::api::test::{ping, get_auth_info, test_get_account, test_task};
 use demo_server::db::DB;
 use demo_server::device::get_device;
 use demo_server::event::{get_task, post_task};
@@ -8,7 +8,7 @@ use demo_server::web_page::vue;
 
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpMessage, HttpRequest, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use demo_server::middleware;
 use demo_server::repository::create_connection_pool;
@@ -44,16 +44,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(db.clone())
             .service(
                 web::scope("/api")
-                    .route("/ping", web::get().to(ping))
+                    .service(
+                        web::resource("/auth")
+                            .wrap(Auth)
+                            .route(web::get().to(login_token))
+                    )
                     .route("/login", web::post().to(login))
                     .route("/signup", web::post().to(signup))
                     .service(
                         web::scope("/my")
                             .wrap(Auth)
-                            .route("/area", web::post().to(add_area))
-                            .route("/device", web::get().to(show_devices))
-                            .route("/device", web::post().to(add_device))
-                            .route("/house", web::post().to(add_house)),
+                            .service(
+                                web::resource("/area")
+                                    .route(web::post().to(add_area)),
+                            )
+                            .service(
+                                web::resource("/device")
+                                    .route(web::get().to(show_devices))
+                                    .route(web::post().to(add_device)),
+                            )
+                            .service(
+                                web::resource("/house")
+                                    .route(web::post().to(add_house)),
+                            )
                     )
                     .service(
                         web::scope("/sse")
@@ -71,20 +84,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .route(web::get().to(get_task))
                             .route(web::post().to(post_task)),
                     )
-                    .route("/test/auth", web::post().to(test_auth))
                     .service(
                         web::scope("/device")
                             .wrap(HttpAuthentication::bearer(validator))
                             .route("", web::get().to(get_device))
                             .route("/{id}/{ops}", web::get().to(test_task)),
-                    ),
+                    )
+                    .service(
+                        web::scope("/test")
+                            .service(
+                                web::resource("/ping")
+                                    .route(web::get().to(ping)),
+                            )
+                            .service(
+                                web::scope("/auth")
+                                    .wrap(Auth)
+                                    .route("", web::get().to(get_auth_info))
+                                    .route("/task/{id}/{ops}", web::post().to(test_task)),
+                            )
+                    )
+                ,
             )
             .service(vue()) // vue static dist
     })
-    .bind("0.0.0.0:80")?
-    .bind_openssl("0.0.0.0:443", builder)?
-    .run()
-    .await?;
+        .bind("0.0.0.0:80")?
+        .bind_openssl("0.0.0.0:443", builder)?
+        .run()
+        .await?;
 
     Ok(())
 }
