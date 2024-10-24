@@ -1,7 +1,7 @@
-use crate::security::{create_token, Role};
+use crate::security::{create_token, validate_token, Claims, Role};
 use crate::utils;
 use crate::utils::{hash, Response};
-use actix_web::{web, Error, HttpResponse};
+use actix_web::{web, Error, HttpMessage, HttpRequest, HttpResponse};
 use deadpool_postgres::{GenericClient, Pool};
 use log::{error, info};
 use serde::Deserialize;
@@ -69,4 +69,8 @@ pub async fn login(req: web::Json<LoginRequest>, db: web::Data<Pool>) -> HttpRes
             ))
         }
     }
+}
+
+pub async fn login_token() -> HttpResponse {
+    HttpResponse::Ok().json(utils::Result::success())
 }
