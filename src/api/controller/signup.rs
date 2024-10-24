@@ -22,7 +22,7 @@ pub async fn signup(account: web::Json<SignupAccount>, pool: web::Data<Pool>) ->
 
     if let Ok(_) = conn
         .query_one(
-            "SELECT * account WHERE username = $1",
+            "SELECT * FROM account WHERE username = $1",
             &[&account.username()],
         )
         .await
