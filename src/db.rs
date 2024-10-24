@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use tokio::sync::mpsc;
 
+// outdated
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct Tasks {
     pub event: RwLock<HashMap<Username, Vec<Task>>>,

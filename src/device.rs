@@ -2,6 +2,8 @@ use crate::db::DB;
 use crate::dto::device::GetDevice;
 use actix_web::{web, HttpResponse};
 
+
+// Outdated
 pub async fn get_device(data: web::Data<DB>, msg: web::Json<GetDevice>) -> HttpResponse {
     let id = &msg.account.username;
     match data.devices.read() {

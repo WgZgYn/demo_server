@@ -5,6 +5,9 @@ use actix_web::{web, HttpResponse};
 use log::info;
 use serde_json::json;
 
+
+// Outdated
+
 pub async fn get_task(data: web::Data<DB>, msg: web::Json<GetTask>) -> HttpResponse {
     let id = &msg.account.username;
     let mut tasks = match data.event().write() {
