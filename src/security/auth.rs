@@ -61,7 +61,7 @@ pub fn create_token(user: String, role: Role, id: i32) -> String {
     token
 }
 
-fn validate_token(token: &str) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
+pub fn validate_token(token: &str) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
     decode::<Claims>(
         token,
         &DecodingKey::from_secret(SECRET_KEY),

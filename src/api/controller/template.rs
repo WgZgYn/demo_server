@@ -8,7 +8,6 @@ pub async fn with_claims<T, F>(
     body: web::Json<T>,
     db: web::Data<Pool>,
     req: HttpRequest,
-    sql: &str,
     f: F,
 ) -> HttpResponse
 where
