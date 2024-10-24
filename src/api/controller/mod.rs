@@ -5,7 +5,7 @@ mod login;
 mod signup;
 mod template;
 
-pub use self::login::login;
+pub use self::login::{login, login_token};
 pub use self::signup::signup;
 pub use area::add_area;
 pub use device::{add_device, show_devices};
