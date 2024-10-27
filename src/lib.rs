@@ -1,10 +1,8 @@
 pub mod api;
+pub mod data;
 pub mod db;
-pub mod device;
 pub mod dto;
-pub mod event;
-pub mod repository;
-pub mod utils;
-pub mod web_page;
-pub mod security;
 pub mod middleware;
+pub mod security;
+pub mod utils;
+pub mod web;

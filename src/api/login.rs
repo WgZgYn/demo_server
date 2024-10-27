@@ -1,7 +1,7 @@
-use crate::security::{create_token, validate_token, Claims, Role};
+use crate::api::auth::{create_token, Role};
 use crate::utils;
 use crate::utils::{hash, Response};
-use actix_web::{web, Error, HttpMessage, HttpRequest, HttpResponse};
+use actix_web::{web, HttpResponse};
 use deadpool_postgres::{GenericClient, Pool};
 use log::{error, info};
 use serde::Deserialize;

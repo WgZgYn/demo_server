@@ -1,5 +1,6 @@
-use crate::repository::create_connection_pool;
+
 use log::info;
+use crate::db::create_connection_pool;
 
 async fn connect_database() -> Result<(), Box<dyn std::error::Error>> {
     let pool = create_connection_pool().await?;

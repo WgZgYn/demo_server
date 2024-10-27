@@ -4,14 +4,16 @@ use crate::dto::sse_message::SSEMessage;
 use crate::dto::task::Task;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::RwLock;
 use tokio::sync::mpsc;
+use tokio::sync::RwLock;
 
 // outdated
-
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Tasks {
-    pub event: RwLock<HashMap<Username, Vec<Task>>>,
+pub struct TaskInner(pub HashMap<Username, Vec<Task>>);
+
+#[derive(Debug, Default)]
+pub struct Tasks {
+    pub event: RwLock<TaskInner>,
 }
 
 #[derive(Debug, Default)]
@@ -23,7 +25,7 @@ pub struct DB {
 }
 
 impl DB {
-    pub(crate) fn event(&self) -> &RwLock<HashMap<Username, Vec<Task>>> {
+    pub(crate) fn event(&self) -> &RwLock<TaskInner> {
         &self.tasks.event
     }
 }

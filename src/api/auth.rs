@@ -23,7 +23,7 @@ impl Role {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     id: i32,
     sub: String,
@@ -68,17 +68,7 @@ pub fn validate_token(token: &str) -> Result<TokenData<Claims>, jsonwebtoken::er
         &Validation::default(),
     )
 }
-//
-// pub async fn bearer_auth_validator(
-//     req: ServiceRequest,
-//     credentials: BearerAuth,
-// ) -> Result<ServiceRequest, Error> {
-//     let token = credentials.token();
-//     match validate_token(token) {
-//         Ok(_) => Ok(req),  // 成功验证 JWT
-//         Err(_) => Ok(HttpResponse::Unauthorized().finish().into())  // 无效令牌，返回 401
-//     }
-// }
+
 pub async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,

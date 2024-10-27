@@ -1,16 +1,14 @@
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::error::ErrorForbidden;
-use actix_web::{Error, HttpResponse};
+use actix_web::Error;
 use futures_util::future::LocalBoxFuture;
 use log::{debug, info};
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::future::{ready, Ready};
 use std::net::IpAddr;
+use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::{Arc, LockResult};
 use std::task::{Context, Poll};
-use std::time::Instant;
 
 #[derive(Default)]
 pub struct RecordIP {

@@ -1,4 +1,4 @@
-use crate::security::Claims;
+use crate::api::auth::Claims;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use serde_json::json;
 

@@ -1,13 +1,11 @@
-use crate::security::Claims;
+use crate::api::auth::Claims;
+use crate::api::template::template::{claims_template, claims_with_json_template};
+use crate::db::device::{add_device, show_device};
 use crate::utils;
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use chrono::{NaiveDateTime, Utc};
-use deadpool_postgres::{GenericClient, Pool};
-use log::{error, info};
+use actix_web::{web, HttpRequest, HttpResponse};
+use deadpool_postgres::{Object, Pool};
+use log::error;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::ops::Index;
-use tokio_postgres::Error;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct AddDevice {
@@ -18,59 +16,31 @@ pub struct AddDevice {
     chip_model: String,
 }
 
-pub async fn add_device(
+pub async fn add_device_api(
     body: web::Json<AddDevice>,
-    db: web::Data<Pool>,
+    pool: web::Data<Pool>,
     req: HttpRequest,
 ) -> HttpResponse {
-    let client = match db.get().await {
-        Ok(conn) => conn,
-        Err(e) => {
-            error!("{e}");
-            return HttpResponse::InternalServerError()
-                .json(utils::Result::error("database error"));
-        }
-    };
+    claims_with_json_template(
+        body,
+        pool,
+        req,
+        Box::new(|body, claims, client| Box::pin(add(body, claims, client))),
+    )
+    .await
+}
 
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
-        None => {
-            return HttpResponse::InternalServerError().json(utils::Result::error("claims error"))
-        }
-    };
-
-    let username = claims.sub();
-    let account_id: i32 = match client
-        .query_one(
-            "SELECT account_id FROM account WHERE username = $1",
-            &[&username],
-        )
-        .await
-    {
-        Ok(row) => row.get(0),
-        Err(e) => {
-            error!("{e}");
-            return HttpResponse::InternalServerError()
-                .json(utils::Result::error("database error"));
-        }
-    };
-
-    match client
-        .execute(
-            "INSERT INTO device\
-     (device_name, efuse_mac, chip_model, type_id, area_id, created_by)\
-      VALUES ($1, $2, $3, $4, $5, $6)",
-            &[
-                &body.device_name,
-                &body.efuse_mac,
-                &body.chip_model,
-                &body.type_id,
-                &body.area_id,
-                &account_id,
-            ],
-        )
-        .await
+async fn add(body: AddDevice, claims: Claims, client: Object) -> HttpResponse {
+    match add_device(
+        client,
+        &body.device_name,
+        &body.efuse_mac,
+        &body.chip_model,
+        body.type_id,
+        body.area_id,
+        claims.id(),
+    )
+    .await
     {
         Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
         Err(e) => {
@@ -120,49 +90,18 @@ struct ShowDevices {
     houses_devices: Vec<HouseDevices>,
 }
 
-pub async fn show_devices(db: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
-    let client = match db.get().await {
-        Ok(conn) => conn,
-        Err(e) => {
-            error!("{e}");
-            return HttpResponse::InternalServerError()
-                .json(utils::Result::error("database error"));
-        }
-    };
+pub async fn show_devices_api(db: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
+    claims_template(
+        db,
+        req,
+        Box::new(|claims, client| Box::pin(show(client, claims))),
+    )
+    .await
+}
 
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
-        None => {
-            return HttpResponse::InternalServerError().json(utils::Result::error("claims error"))
-        }
-    };
-
+async fn show(client: Object, claims: Claims) -> HttpResponse {
     let account_id = claims.id();
-    match client
-        .query(
-            "
-        SELECT
-            h.house_id,
-            h.house_name,
-            a.area_id,
-            a.area_name,
-            d.device_id,
-            d.device_name,
-            d.efuse_mac,
-            d.chip_model,
-            dt.type_id,
-            dt.type_name
-        FROM member m
-        JOIN house h ON m.house_id = h.house_id
-        JOIN area a ON a.house_id = h.house_id
-        JOIN device d ON d.area_id = a.area_id
-        JOIN device_type dt ON dt.type_id = d.type_id
-        WHERE m.account_id = $1;",
-            &[&account_id],
-        )
-        .await
-    {
+    match show_device(client, account_id).await {
         Ok(rows) => {
             let mut ad: Vec<HouseDevices> = Vec::new();
 
@@ -181,7 +120,11 @@ pub async fn show_devices(db: web::Data<Pool>, req: HttpRequest) -> HttpResponse
                 let type_name = row.get("type_name");
 
                 if let Some(house) = ad.iter_mut().find(|h| h.house_id == house_id) {
-                    if let Some(area) = house.areas_devices.iter_mut().find(|a| a.area_name == area_name) {
+                    if let Some(area) = house
+                        .areas_devices
+                        .iter_mut()
+                        .find(|a| a.area_name == area_name)
+                    {
                         area.devices.push(Device {
                             device_id,
                             device_name,
