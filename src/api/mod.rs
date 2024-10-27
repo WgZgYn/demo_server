@@ -1,21 +1,20 @@
 use crate::api::auth::{validator, Auth};
 use crate::api::login::{login, login_token};
 use crate::api::my::config_my;
-use crate::api::service::sse::{sse_handler, sse_test};
 use crate::api::signup::signup;
 use crate::api::test::{get_auth_info, ping, test_get_account, test_task};
 use crate::db::device::get_device;
 use crate::db::event::{get_task, post_task};
 use actix_web::web;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use crate::api::sse::{sse_handler, sse_test};
 
 pub mod auth;
 pub mod login;
 pub mod my;
-pub mod service;
 pub mod signup;
-pub mod template;
 pub mod test;
+pub mod sse;
 
 pub fn config_api(cfg: &mut web::ServiceConfig) {
     cfg.service(

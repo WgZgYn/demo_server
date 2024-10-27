@@ -11,7 +11,7 @@ pub mod house;
 
 pub fn config_my(cfg: &mut ServiceConfig) {
     cfg.service(
-        web::scope("/api")
+        web::scope("/my")
             .wrap(Auth)
             .service(web::resource("/area").route(web::post().to(add_area_api)))
             .service(

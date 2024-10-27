@@ -1,5 +1,5 @@
 use crate::api::auth::Claims;
-use crate::api::template::template::{claims_template, claims_with_json_template};
+use crate::template::template::{claims_template, claims_with_json_template};
 use crate::db::device::{add_device, show_device};
 use crate::utils;
 use actix_web::{web, HttpRequest, HttpResponse};

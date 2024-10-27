@@ -6,3 +6,5 @@ pub mod middleware;
 pub mod security;
 pub mod utils;
 pub mod web;
+pub mod template;
+pub mod service;

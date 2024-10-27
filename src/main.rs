@@ -8,7 +8,7 @@ use demo_server::api::config_api;
 use demo_server::middleware::Timer;
 use demo_server::security::{config_ssl, RecordIP};
 use log::debug;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
