@@ -1,11 +1,14 @@
 pub mod area;
-mod db;
 pub mod device;
-pub mod event;
 pub mod house;
 pub mod pool;
-mod test_pool;
+pub mod user_info;
 
-pub use db::DB;
+use tokio_postgres::Row;
 
 pub use pool::create_connection_pool;
+
+pub type QueryType = Result<Vec<Row>, tokio_postgres::Error>;
+pub type QueryOneType = Result<Row, tokio_postgres::Error>;
+
+pub type ExecuteType = Result<u64, tokio_postgres::Error>;

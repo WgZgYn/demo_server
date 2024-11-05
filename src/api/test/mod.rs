@@ -1,9 +1,27 @@
 mod ping;
 mod test_auth;
-mod test_get_account;
-mod test_post_task;
 
+use crate::api::auth::Auth;
+use actix_web::web::ServiceConfig;
+use actix_web::{web, HttpResponse};
 pub use ping::ping;
+use rumqttc::AsyncClient;
 pub use test_auth::get_auth_info;
-pub use test_get_account::test_get_account;
-pub use test_post_task::test_task;
+
+async fn test_mqtt(client: web::Data<AsyncClient>) -> HttpResponse {
+    println!("test_mqtt client: {:?}", client);
+    HttpResponse::Ok().finish()
+}
+
+pub fn config_test(cfg: &mut ServiceConfig) {
+    cfg.service(
+        web::scope("/test")
+            .service(web::resource("/ping").route(web::get().to(ping)))
+            .service(web::resource("/mqtt").route(web::get().to(test_mqtt)))
+            .service(
+                web::scope("/auth")
+                    .wrap(Auth)
+                    .route("", web::get().to(get_auth_info))
+            ),
+    );
+}
