@@ -1,60 +1,31 @@
 use crate::api::auth::Claims;
-use crate::db::DB;
-use crate::dto::account::Username;
 use crate::dto::SSEMessage;
 use actix_web::web::Bytes;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use deadpool_postgres::Pool;
 use log::info;
 use std::time::Duration;
+use tokio::sync::RwLock;
 use tokio::time::sleep;
+use crate::data::sse::SseHandler;
 
 pub async fn sse_account(
     data: web::Data<Pool>,
+    sse: web::Data<RwLock<SseHandler>>,
     req: HttpRequest,
-    db: web::Data<DB>,
 ) -> HttpResponse {
     let e = req.extensions();
     let claims = e.get::<Claims>().unwrap();
-    let username = claims.sub();
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<SSEMessage>(32);
-
-    let mut conns = db.conn.write().await;
-
-    conns
-        .entry(Username(username.to_string()))
-        .or_insert(Vec::new())
-        .push(tx.clone());
-
+    let account_id = claims.id();
+    let (key, mut rx) = sse.write().await.new_session(account_id);
     info!("new sse conn");
+
     let server_events = async_stream::stream! {
-        info!("one sender is disconnected");
         while let Some(msg) = rx.recv().await {
-            yield Ok::<_, actix_web::Error>(Bytes::from(format!("data: {}\n\n", msg.message())))
+            yield Ok::<_, actix_web::Error>(Bytes::from(format!("data: {}\n\n", msg)))
         }
-    };
-
-    HttpResponse::Ok()
-        .content_type("text/event-stream")
-        .streaming(server_events)
-}
-
-pub async fn sse_handler(data: web::Data<DB>) -> HttpResponse {
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<SSEMessage>(32);
-
-    let mut conns = data.conn.write().await;
-
-    conns
-        .entry(Username("wzy".to_string()))
-        .or_insert(Vec::new())
-        .push(tx.clone());
-
-    info!("new sse conn");
-    let server_events = async_stream::stream! {
-        info!("one sender is disconnected");
-        while let Some(msg) = rx.recv().await {
-            yield Ok::<_, actix_web::Error>(Bytes::from(format!("data: {}\n\n", msg.message())))
-        }
+        info!("one session is to be closed");
+        sse.write().await.close_session(account_id, key, rx);
     };
 
     HttpResponse::Ok()

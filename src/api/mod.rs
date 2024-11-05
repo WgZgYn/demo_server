@@ -5,12 +5,14 @@ use crate::api::signup::signup;
 use crate::api::test::{config_test};
 use actix_web::web;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use crate::api::sse::sse_account;
 
 pub mod auth;
 pub mod login;
 pub mod my;
 pub mod signup;
 pub mod test;
+mod sse;
 
 pub fn config_api(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -25,6 +27,7 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
             .configure(config_my)
             .service(
                 web::scope("/sse")
+                    .route("", web::get().to(sse_account))
             )
             .service(
                 web::resource("/task")

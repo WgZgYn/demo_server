@@ -3,6 +3,7 @@ use deadpool_postgres::Pool;
 
 pub mod device;
 pub mod sse_config;
+pub mod sse;
 
 pub fn config_appdata(cfg: &mut ServiceConfig) {
     let counter = Data::new(0);
