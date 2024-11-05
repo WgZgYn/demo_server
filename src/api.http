@@ -1,0 +1,18 @@
+### GET request to example server
+GET localhost:80/api/test/mqtt
+
+###
+POST localhost:80/api/login
+Content-Type: application/json
+
+{
+  "username": "wzy",
+  "password": "123456"
+}
+###
+GET localhost:80/api/my/device
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Mywic3ViIjoid3p5Iiwicm9sZSI6InVzZXIiLCJleHAiOjE3MzA0NzAyMjB9._NhCIDORGidU-9BDWXFlwsmwprrSAj6t_HuNL708i8s
+
+###
+GET localhost:80/api/my/device/4/switch
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Mywic3ViIjoid3p5Iiwicm9sZSI6InVzZXIiLCJleHAiOjE3MzA0NzAyMjB9._NhCIDORGidU-9BDWXFlwsmwprrSAj6t_HuNL708i8s
