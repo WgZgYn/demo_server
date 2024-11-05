@@ -3,22 +3,18 @@ use crate::utils;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use deadpool_postgres::{Object, Pool};
 use log::error;
-use serde::Serialize;
 use std::future::Future;
 use std::pin::Pin;
 
 type AsyncFn<T> =
     dyn FnOnce(T, Claims, Object) -> Pin<Box<dyn Future<Output = HttpResponse> + Send>> + Send;
 
-pub async fn claims_with_json_template<T>(
-    body: web::Json<T>,
+pub async fn claims_with_data_template<T>(
+    body: T,
     db: web::Data<Pool>,
     req: HttpRequest,
     f: Box<AsyncFn<T>>,
-) -> HttpResponse
-where
-    T: Serialize,
-{
+) -> HttpResponse {
     let client = match db.get().await {
         Ok(conn) => conn,
         Err(e) => {
@@ -36,7 +32,7 @@ where
         }
     };
 
-    f(body.into_inner(), claims.clone(), client).await
+    f(body, claims.clone(), client).await
 }
 
 type AsyncFn2 =
