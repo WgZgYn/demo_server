@@ -2,3 +2,9 @@ database:
   host: "47.108.27.238"
   user: "scu301"
   dbname: "db123"
+mqtt:
+  host: "47.108.27.238"
+  port: 1883
+  id: remote-server-rust
+  cap: 10
+  keep-alive: 5
