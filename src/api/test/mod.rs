@@ -7,10 +7,11 @@ use actix_web::{web, HttpResponse};
 pub use ping::ping;
 use rumqttc::AsyncClient;
 pub use test_auth::get_auth_info;
+use crate::utils;
 
 async fn test_mqtt(client: web::Data<AsyncClient>) -> HttpResponse {
     println!("test_mqtt client: {:?}", client);
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().json(utils::Result::success())
 }
 
 pub fn config_test(cfg: &mut ServiceConfig) {
