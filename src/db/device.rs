@@ -1,17 +1,7 @@
-use crate::db::DB;
-use crate::dto::device::GetDevice;
-use actix_web::{web, HttpResponse};
-use deadpool_postgres::Object;
-use tokio_postgres::Row;
+use crate::db::{ExecuteType, QueryType};
+use deadpool_postgres::{GenericClient, Object};
 
-// Outdated
-pub async fn get_device(data: web::Data<DB>, msg: web::Json<GetDevice>) -> HttpResponse {
-    let id = &msg.account.username;
-    match data.devices.read().await.get(&id) {
-        Some(d) => HttpResponse::Ok().json(d),
-        None => HttpResponse::NotFound().body("Device not found for account"),
-    }
-}
+
 
 pub async fn add_device(
     client: Object,
@@ -21,7 +11,7 @@ pub async fn add_device(
     type_id: i32,
     area_id: i32,
     account_id: i32,
-) -> Result<u64, tokio_postgres::Error> {
+) -> ExecuteType {
     client
         .execute(
             "INSERT INTO device\
@@ -39,10 +29,7 @@ pub async fn add_device(
         .await
 }
 
-pub async fn show_device(
-    client: Object,
-    account_id: i32,
-) -> Result<Vec<Row>, tokio_postgres::Error> {
+pub async fn show_device(client: Object, account_id: i32) -> QueryType {
     client
         .query(
             "
@@ -56,12 +43,19 @@ pub async fn show_device(
             d.efuse_mac,
             d.chip_model,
             dt.type_id,
-            dt.type_name
+            dt.type_name,
+            dc.parameter
         FROM member m
-        JOIN house h ON m.house_id = h.house_id
-        JOIN area a ON a.house_id = h.house_id
-        JOIN device d ON d.area_id = a.area_id
-        JOIN device_type dt ON dt.type_id = d.type_id
+        JOIN house h 
+            ON m.house_id = h.house_id
+        JOIN area 
+            a ON a.house_id = h.house_id
+        JOIN device d 
+            ON d.area_id = a.area_id
+        JOIN device_type dt 
+            ON dt.type_id = d.type_id
+        LEFT JOIN device_control dc 
+            ON dc.device_id = d.device_id
         WHERE m.account_id = $1;",
             &[&account_id],
         )
