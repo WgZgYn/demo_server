@@ -98,14 +98,12 @@ async fn query(client: Object, claims: Claims) -> HttpResponse {
             for row in rows {
                 let house_id: i32 = row.get("house_id");
                 let house_name = row.get("house_name");
-
                 let area_id: i32 = row.get("area_id");
                 let area_name = row.get("area_name");
-
                 let device_id = row.get("device_id");
                 let device_name = row.get("device_name");
                 let efuse_mac = row.get("efuse_mac");
-                let chip_model = row.get("chip_model");
+                let model_name = row.get("model_name");
                 let type_id = row.get("type_id");
                 let type_name = row.get("type_name");
                 let parameter: Option<serde_json::Value> = row.get("parameter");
@@ -126,7 +124,7 @@ async fn query(client: Object, claims: Claims) -> HttpResponse {
                                     device_id,
                                     device_name,
                                     efuse_mac,
-                                    chip_model,
+                                    model_name,
                                     device_type: DeviceType { type_id, type_name },
                                     service: s,
                                 }),
@@ -140,7 +138,7 @@ async fn query(client: Object, claims: Claims) -> HttpResponse {
                                     device_id,
                                     device_name,
                                     efuse_mac,
-                                    chip_model,
+                                    model_name,
                                     device_type: DeviceType { type_id, type_name },
                                     service: s,
                                 }],
@@ -158,7 +156,7 @@ async fn query(client: Object, claims: Claims) -> HttpResponse {
                                 device_id,
                                 device_name,
                                 efuse_mac,
-                                chip_model,
+                                model_name,
                                 device_type: DeviceType { type_id, type_name },
                                 service: s,
                             }],
@@ -246,7 +244,7 @@ struct Device {
     device_id: i32,
     device_name: String,
     efuse_mac: String,
-    chip_model: String,
+    model_name: String,
     device_type: DeviceType,
     service: Vec<serde_json::Value>,
 }
