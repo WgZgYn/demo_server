@@ -20,4 +20,12 @@ impl SseHandler {
             sessions.remove(&key);
         };
     }
+
+    pub async fn send(&mut self, account_id: i32, msg: &str) {
+        if let Some(mp) = self.account_session.get(&account_id) {
+            for (_, v) in mp.iter() {
+                v.send(msg.to_string()).await.expect("TODO: panic message");
+            }
+        }
+    }
 }
