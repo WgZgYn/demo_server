@@ -8,8 +8,9 @@ use demo_server::api::config_api;
 use demo_server::service::middleware::Timer;
 use demo_server::security::{config_ssl, RecordIP};
 use log::debug;
-use tokio::sync::Mutex;
-use demo_server::data::device::DeviceStatus;
+use tokio::sync::{Mutex, RwLock};
+use demo_server::data::device::{Cache, DeviceStatus};
+use demo_server::data::sse::SseHandler;
 use demo_server::service::{handle_mqtt_message, mqtt};
 use demo_server::utils::config::read_config;
 
@@ -21,14 +22,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = read_config()?;
     let ssl = config_ssl()?;
     let pool = web::Data::new(create_connection_pool(&cfg.database).await?);
+
     // 内存共享数据
     let counter = web::Data::new(Mutex::new(0));
-    let memory = web::Data::new(DeviceStatus::default());
-    let (client, event_loop) = mqtt(&cfg.mqtt);
+    let cache = web::Data::new(RwLock::new(Cache::default()));
+    let memory = web::Data::new(RwLock::new(DeviceStatus::default()));
+    let sse_session = web::Data::new(RwLock::new(SseHandler::default()));
+    let (client, event_loop) = mqtt(&cfg.mqtt).await;
     let client = web::Data::new(client);
 
+    let memory1 = memory.clone();
+    let pool1 = pool.clone();
+    let sse1 = sse_session.clone();
+
     tokio::spawn(async move {
-        handle_mqtt_message(event_loop).await;
+        handle_mqtt_message(event_loop, sse1, memory1, pool1, cache).await;
     });
 
     HttpServer::new(move || {
