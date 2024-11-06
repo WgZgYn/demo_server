@@ -1,4 +1,4 @@
-use crate::db::{ExecuteType, QueryType};
+use crate::db::{ExecuteType, QueryOneType, QueryType};
 use deadpool_postgres::{GenericClient, Object};
 
 
@@ -31,33 +31,12 @@ pub async fn add_device(
 
 pub async fn show_device(client: Object, account_id: i32) -> QueryType {
     client
-        .query(
-            "
-        SELECT
-            h.house_id,
-            h.house_name,
-            a.area_id,
-            a.area_name,
-            d.device_id,
-            d.device_name,
-            d.efuse_mac,
-            d.chip_model,
-            dt.type_id,
-            dt.type_name,
-            dc.parameter
-        FROM member m
-        JOIN house h 
-            ON m.house_id = h.house_id
-        JOIN area 
-            a ON a.house_id = h.house_id
-        JOIN device d 
-            ON d.area_id = a.area_id
-        JOIN device_type dt 
-            ON dt.type_id = d.type_id
-        LEFT JOIN device_control dc 
-            ON dc.device_id = d.device_id
-        WHERE m.account_id = $1;",
+        .query("SELECT * FROM account_devices_view WHERE account_id = $1;",
             &[&account_id],
         )
         .await
+}
+
+pub async fn get_device_id_by_mac(client: Object, efuse_mac: &str) -> QueryOneType {
+    client.query_one("SELECT device_id FROM device WHERE device_id = $1", &[&efuse_mac]).await
 }
