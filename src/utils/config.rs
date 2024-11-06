@@ -15,6 +15,10 @@ pub struct MqttConfig {
     pub id: String,
     pub cap: usize,
     pub keep_alive: u64,
+    pub topic_status: String,
+    pub topic_status_qos: u8,
+    pub topic_events: String,
+    pub topic_events_qos: u8,
 }
 
 #[derive(Deserialize)]

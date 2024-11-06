@@ -5,6 +5,10 @@ database:
 mqtt:
   host: "47.108.27.238"
   port: 1883
-  id: remote-server-rust
+  id: local-server-rust
   cap: 10
-  keep-alive: 5
+  keep_alive: 5
+  topic_status: "/status"
+  topic_status_qos: 1
+  topic_events: "/events"
+  topic_events_qos: 2
