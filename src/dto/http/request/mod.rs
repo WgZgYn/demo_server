@@ -1,25 +1,31 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
+#[derive(Deserialize)]
 pub struct AccountUpdate {
 
 }
 
+#[derive(Deserialize)]
 pub struct HouseUpdate {
 
 }
 
+#[derive(Deserialize)]
 pub struct AreaUpdate {
 
 }
 
+#[derive(Deserialize)]
 pub struct DeviceUpdate {
 
 }
 
+#[derive(Deserialize)]
 pub struct AccountLogin {
 
 }
 
+#[derive(Deserialize)]
 pub struct AccountSignup {
 
 }
