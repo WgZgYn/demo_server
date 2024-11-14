@@ -1,6 +1,6 @@
-mod ip;
 mod ssl;
+pub mod hash;
 
-pub use ip::*;
+pub use crate::service::middleware::ip::*;
 
 pub use ssl::config_ssl;
