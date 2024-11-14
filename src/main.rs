@@ -1,10 +1,11 @@
-use demo_server::db::{create_connection_pool};
+use demo_server::db::{create_connection_pool, DataBase};
 use demo_server::web::{config_redirects, config_web};
 
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
-use demo_server::api::config_api;
+use actix_web::web::Data;
+use demo_server::api::{config_api, config_api_v2};
 use demo_server::service::middleware::Timer;
 use demo_server::security::{config_ssl, RecordIP};
 use log::debug;
@@ -21,7 +22,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cfg = read_config()?;
     let ssl = config_ssl()?;
-    let pool = web::Data::new(create_connection_pool(&cfg.database).await?);
+    
+    let pool = create_connection_pool(&cfg.database).await?;
+    
+    let database = Data::new(DataBase::from(pool.clone()));
+    let pool = web::Data::new(pool);
 
     // 内存共享数据
     let counter = web::Data::new(Mutex::new(0));
@@ -49,7 +54,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(pool.clone())
             .app_data(client.clone())
             .app_data(memory.clone())
+            .app_data(database.clone())
             .configure(config_api)
+            .configure(config_api_v2)
             .configure(config_web) // vue static dist
             .configure(config_redirects)
     })
