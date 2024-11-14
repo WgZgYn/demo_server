@@ -37,3 +37,6 @@ Authorization: Bearer {{remote-rust-token}}
 ###
 GET 47.108.27.238/api/my/device/4/switch
 Authorization: Bearer {{remote-rust-token}}
+###
+GET 47.108.27.238/api/sse
+Authorization: Bearer {{remote-rust-token}}

@@ -4,7 +4,7 @@ use actix_web::{web, HttpResponse};
 use log::info;
 
 pub fn vue() -> Files {
-    Files::new("/", "./static").index_file("index.html")
+    Files::new("/", "./html").index_file("index.html")
 }
 pub fn config_web(cfg: &mut ServiceConfig) {
     cfg.service(vue());
