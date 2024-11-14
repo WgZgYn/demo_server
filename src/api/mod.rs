@@ -13,6 +13,7 @@ pub mod my;
 pub mod signup;
 pub mod test;
 mod sse;
+mod v2;
 
 pub fn config_api(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -38,5 +39,24 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
                     .wrap(HttpAuthentication::bearer(validator))
             )
             .configure(config_test),
+    );
+}
+
+
+pub fn config_api_v2(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/v2")
+            .service(
+                web::resource("/auth")
+                    .wrap(Auth)
+                    .route(web::get().to(login_token)),
+            )
+            .route("/login", web::post().to(v2::login))
+            .route("/signup", web::post().to(v2::signup))
+            .service(
+                web::scope("/my")
+                    .wrap(Auth)
+                    .route("/device", web::get().to(v2::get_all_devices))
+            )
     );
 }
