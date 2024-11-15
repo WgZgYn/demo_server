@@ -288,10 +288,10 @@ impl Session {
     pub async fn add_user_info(
         &self,
         account_id: i32,
-        gender: Option<&str>,
-        city: Option<&str>,
+        gender: Option<String>,
+        city: Option<String>,
         age: Option<i32>,
-        email: Option<&str>,
+        email: Option<String>,
     ) -> Result<u64, Error> {
         self.execute(
             "INSERT INTO user_info \
@@ -306,13 +306,13 @@ impl Session {
         let mut old_info = match self.get_user_info(account_id).await {
             Ok(v) => v,
             Err(_) => {
-                return self.add_user_info(
+                return Ok(self.add_user_info(
                     account_id,
-                    user_info.gender.map(|s| s.as_str()),
-                    user_info.city.map(|s| s.as_str()),
+                    user_info.gender,
+                    user_info.city,
                     user_info.age,
-                    user_info.email.map(|s| s.as_str()),
-                )
+                    user_info.email,
+                ).await?)
             }
         };
 
