@@ -1,4 +1,5 @@
 use crate::api::auth::{create_token, Role};
+use crate::security::hash;
 use crate::utils;
 use crate::utils::Response;
 use actix_web::{web, HttpResponse};
@@ -6,7 +7,6 @@ use deadpool_postgres::{GenericClient, Pool};
 use log::{error, info};
 use serde::Deserialize;
 use serde_json::json;
-use crate::security::hash;
 
 // 认证登录请求结构
 #[derive(Deserialize)]
@@ -51,10 +51,12 @@ pub async fn login(req: web::Json<LoginRequest>, db: web::Data<Pool>) -> HttpRes
         return HttpResponse::Unauthorized().json(utils::Result::error("password error"));
     }
 
-    match client.execute(
-        "UPDATE account SET last_login=CURRENT_TIMESTAMP WHERE username = $1",
-        &[username],
-    ).await
+    match client
+        .execute(
+            "UPDATE account SET last_login=CURRENT_TIMESTAMP WHERE username = $1",
+            &[username],
+        )
+        .await
     {
         Ok(i) => {
             info!("{i} was updated");

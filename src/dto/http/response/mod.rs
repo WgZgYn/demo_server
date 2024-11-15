@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::dto::entity::simple::{AccountInfo, AreaInfo, DeviceInfo, HouseInfo};
+use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct AccountDevices {
     pub account_info: AccountInfo,

@@ -1,9 +1,9 @@
 pub mod area;
+mod database;
 pub mod device;
 pub mod house;
 pub mod pool;
 pub mod user_info;
-mod database;
 
 use tokio_postgres::Row;
 
@@ -13,4 +13,4 @@ pub type QueryType = Result<Vec<Row>, tokio_postgres::Error>;
 pub type QueryOneType = Result<Row, tokio_postgres::Error>;
 pub type ExecuteType = Result<u64, tokio_postgres::Error>;
 
-pub use database::{DataBase, CachedDataBase};
+pub use database::{CachedDataBase, DataBase};

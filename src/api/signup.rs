@@ -1,6 +1,6 @@
 use crate::dto::account::SignupAccount;
-use crate::utils;
 use crate::security::hash::{gen_salt, password_hash};
+use crate::utils;
 use actix_web::{web, HttpResponse};
 use deadpool_postgres::Pool;
 use log::error;

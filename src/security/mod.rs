@@ -1,5 +1,5 @@
-mod ssl;
 pub mod hash;
+mod ssl;
 
 pub use crate::service::middleware::ip::*;
 

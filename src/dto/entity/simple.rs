@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize)]
 pub struct AccountInfo {
@@ -39,10 +39,11 @@ pub struct DeviceType {
 #[derive(Serialize, Deserialize)]
 pub struct MemberInfo {}
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct UserInfo {
-    pub age: i32,
-    pub city: String,
-    pub email: String,
-    pub name: String,
+    pub age: Option<i32>,
+    pub city: Option<String>,
+    pub email: Option<String>,
+    pub name: Option<String>,
+    pub gender: Option<String>,
 }

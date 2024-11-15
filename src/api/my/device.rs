@@ -1,14 +1,14 @@
 use crate::api::auth::Claims;
+use crate::data::device::DeviceStatus;
 use crate::db::device::{add_device, show_device};
 use crate::template::template::{claims_template, claims_with_data_template};
 use crate::utils;
+use crate::utils::Response;
 use actix_web::{web, HttpRequest, HttpResponse};
 use deadpool_postgres::{Object, Pool};
 use log::error;
 use rumqttc::{AsyncClient, QoS};
 use serde::{Deserialize, Serialize};
-use crate::data::device::DeviceStatus;
-use crate::utils::Response;
 
 pub async fn add_device_api(
     body: web::Json<AddDevice>,
@@ -21,7 +21,7 @@ pub async fn add_device_api(
         req,
         Box::new(|body, claims, client| Box::pin(add(body.into_inner(), claims, client))),
     )
-        .await
+    .await
 }
 
 pub async fn query_devices_api(pool: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
@@ -30,7 +30,7 @@ pub async fn query_devices_api(pool: web::Data<Pool>, req: HttpRequest) -> HttpR
         req,
         Box::new(|claims, client| Box::pin(query(client, claims))),
     )
-        .await
+    .await
 }
 
 // TODO:
@@ -55,7 +55,7 @@ pub async fn device_service_api(
         req,
         Box::new(|body, claims, client| Box::pin(device_service(client, claims, body))),
     )
-        .await
+    .await
 }
 
 pub async fn device_status_api(
@@ -79,7 +79,7 @@ async fn add(body: AddDevice, claims: Claims, client: Object) -> HttpResponse {
         body.area_id,
         claims.id(),
     )
-        .await
+    .await
     {
         Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
         Err(e) => {

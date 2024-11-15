@@ -1,5 +1,5 @@
 use crate::api::auth::Claims;
-use crate::dto::SSEMessage;
+use crate::data::sse::SseHandler;
 use actix_web::web::Bytes;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use deadpool_postgres::Pool;
@@ -7,7 +7,6 @@ use log::info;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
-use crate::data::sse::SseHandler;
 
 pub async fn sse_account(
     data: web::Data<Pool>,

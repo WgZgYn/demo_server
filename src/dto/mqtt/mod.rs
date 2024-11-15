@@ -1,7 +1,3 @@
-pub struct DeviceMessage {
+pub struct DeviceMessage {}
 
-}
-
-pub struct HostMessage {
-
-}
+pub struct HostMessage {}

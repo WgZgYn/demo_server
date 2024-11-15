@@ -1,13 +1,14 @@
-use crate::db::DataBase;
-use crate::dto::http::request::{Login, Signup};
-use crate::utils::Response;
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use log::{error, info};
 use crate::api::auth::Claims;
+use crate::db::{CachedDataBase, DataBase};
+use crate::dto::http::request::{Login, Signup, UserInfoUpdate};
 use crate::dto::http::response::LoginSuccess;
 use crate::security::hash;
 use crate::security::hash::{gen_salt, password_hash};
 use crate::utils;
+use crate::utils::Response;
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use log::{error, info};
+
 pub async fn login(data: web::Json<Login>, db: web::Data<DataBase>) -> HttpResponse {
     let Login { username, password } = data.into_inner();
     let session = match db.get_session().await {
@@ -26,7 +27,10 @@ pub async fn login(data: web::Json<Login>, db: web::Data<DataBase>) -> HttpRespo
     };
 
     if hash::password_verify(&password_hash, password.as_ref()) {
-        let token = match session.update_account_last_login(account_id, username).await {
+        let token = match session
+            .update_account_last_login(account_id, username)
+            .await
+        {
             Ok(v) => v,
             Err(e) => {
                 error!("{}", e);
@@ -60,19 +64,21 @@ pub async fn signup(data: web::Json<Signup>, db: web::Data<DataBase>) -> HttpRes
     HttpResponse::Ok().finish()
 }
 
-
 pub async fn get_all_devices(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
     let e = req.extensions();
     let claims = match e.get::<Claims>() {
         Some(claims) => claims,
         None => {
-            return HttpResponse::InternalServerError().json(utils::Result::error("claims error"))
+            return HttpResponse::Unauthorized().finish()
         }
     };
-    
+
     match db.get_session().await {
         Ok(session) => {
-            let res = match session.get_account_all_devices(claims.id(), claims.sub().to_string()).await {
+            let res = match session
+                .get_account_devices(claims.id(), claims.sub().to_string())
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     error!("{}", e);
@@ -80,6 +86,130 @@ pub async fn get_all_devices(req: HttpRequest, db: web::Data<DataBase>) -> HttpR
                 }
             };
             HttpResponse::Ok().json(Response::success(res))
+        }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn get_all_house_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().finish()
+        }
+    };
+    match db.get_session().await {
+        Ok(session) => match session.get_all_house_info(claims.id()).await {
+            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn get_all_area_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().finish()
+        }
+    };
+
+    match db.get_session().await {
+        Ok(session) => match session.get_all_area_info(claims.id()).await {
+            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn get_device_info(req: HttpRequest, path: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().finish()
+        }
+    };
+
+    match db.get_session().await {
+        Ok(session) => match session.get_device_info(*path).await {
+            Ok(v) => {
+                HttpResponse::Ok().json(Response::success(v))
+            }
+            Err(e) => {
+                HttpResponse::NotFound().json(e.to_string())
+            }
+        }
+        Err(e) => {
+            error!("{e}");
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+
+pub async fn get_user_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().finish()
+        }
+    };
+    match db.get_session().await {
+        Ok(session) =>{
+            match session.get_user_info(claims.id()).await {
+                Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn update_user_info(req: HttpRequest, data: web::Json<UserInfoUpdate>,db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => {
+            return HttpResponse::Unauthorized().finish()
+        }
+    };
+
+    match db.get_session().await {
+        Ok(session) =>{
+            match session.update_user_info(data.into_inner(), claims.id()).await {
+                Ok(_) => HttpResponse::Ok().finish(),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
         }
         Err(e) => {
             error!("{}", e);

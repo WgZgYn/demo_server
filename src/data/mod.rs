@@ -2,8 +2,8 @@ use actix_web::web::{Data, ServiceConfig};
 use deadpool_postgres::Pool;
 
 pub mod device;
-pub mod sse_config;
 pub mod sse;
+pub mod sse_config;
 
 pub fn config_appdata(cfg: &mut ServiceConfig) {
     let counter = Data::new(0);

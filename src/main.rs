@@ -3,17 +3,17 @@ use demo_server::web::{config_redirects, config_web};
 
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpServer};
 use actix_web::web::Data;
+use actix_web::{web, App, HttpServer};
 use demo_server::api::{config_api, config_api_v2};
-use demo_server::service::middleware::Timer;
-use demo_server::security::{config_ssl, RecordIP};
-use log::debug;
-use tokio::sync::{Mutex, RwLock};
 use demo_server::data::device::{Cache, DeviceStatus};
 use demo_server::data::sse::SseHandler;
+use demo_server::security::{config_ssl, RecordIP};
+use demo_server::service::middleware::Timer;
 use demo_server::service::{handle_mqtt_message, mqtt};
 use demo_server::utils::config::read_config;
+use log::debug;
+use tokio::sync::{Mutex, RwLock};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,9 +22,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cfg = read_config()?;
     let ssl = config_ssl()?;
-    
+
     let pool = create_connection_pool(&cfg.database).await?;
-    
+
     let database = Data::new(DataBase::from(pool.clone()));
     let pool = web::Data::new(pool);
 
@@ -55,14 +55,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(client.clone())
             .app_data(memory.clone())
             .app_data(database.clone())
-            .configure(config_api)
+            // .configure(config_api)
             .configure(config_api_v2)
-            .configure(config_web) // vue static dist
-            .configure(config_redirects)
+            // .configure(config_web) // vue static dist
+            // .configure(config_redirects)
     })
-        .bind("0.0.0.0:80")?
-        .bind_openssl("0.0.0.0:443", ssl)?
-        .run()
-        .await?;
+    .bind("0.0.0.0:8123")?
+    .bind_openssl("0.0.0.0:443", ssl)?
+    .run()
+    .await?;
     Ok(())
 }

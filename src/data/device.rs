@@ -1,10 +1,6 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use actix_web::web;
-use deadpool_postgres::Pool;
 use log::error;
 use rumqttc::{AsyncClient, ClientError, QoS};
-use serde::Deserialize;
-use crate::db::device::get_device_id_by_mac;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Default)]
 pub struct AccountDeviceStatus {
@@ -34,7 +30,11 @@ impl DeviceStatus {
         self.status.get(&device_id)
     }
 
-    pub async fn on_device_message(&mut self, device_id: i32, msg: serde_json::Value) -> Option<i32> {
+    pub async fn on_device_message(
+        &mut self,
+        device_id: i32,
+        msg: serde_json::Value,
+    ) -> Option<i32> {
         match msg["type"].as_str() {
             Some("status") => {
                 self.on_device_status(device_id, msg["payload"].clone());
@@ -56,7 +56,10 @@ impl DeviceStatus {
         }
     }
     fn on_device_event(&mut self, device_id: i32, event: serde_json::Value) {
-        self.events.entry(device_id).or_insert(VecDeque::new()).push_back(event);
+        self.events
+            .entry(device_id)
+            .or_insert(VecDeque::new())
+            .push_back(event);
     }
     pub async fn update_all_devices_status(&mut self, client: &mut AsyncClient) {
         for (_, mac) in self.online.drain() {
@@ -65,7 +68,17 @@ impl DeviceStatus {
             }
         }
     }
-    async fn update_device_status(device_mac: String, client: &mut AsyncClient) -> Result<(), ClientError> {
-        client.publish(format!("/device/{}/service", device_mac), QoS::AtLeastOnce, false, "status").await
+    async fn update_device_status(
+        device_mac: String,
+        client: &mut AsyncClient,
+    ) -> Result<(), ClientError> {
+        client
+            .publish(
+                format!("/device/{}/service", device_mac),
+                QoS::AtLeastOnce,
+                false,
+                "status",
+            )
+            .await
     }
 }

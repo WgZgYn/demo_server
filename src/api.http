@@ -41,6 +41,9 @@ Authorization: Bearer {{remote-rust-token}}
 GET 47.108.27.238/api/sse
 Authorization: Bearer {{remote-rust-token}}
 
+
+###
+
 ###
 POST localhost:80/v2/login
 Content-Type: application/json
@@ -50,6 +53,18 @@ Content-Type: application/json
   "password": "123456"
 }
 
+> {% client.global.set("token", response.body.data.token); %}
+
 ###
 GET localhost:80/v2/my/device
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Mywic3ViIjoid3p5Iiwicm9sZSI6InVzZXIiLCJleHAiOjE3MzE2MDU4MDd9.Z7BTn1S_SvQRCkXC04O3EAMtEnB5bBN_zapkLxvP9cg
+Authorization: Bearer {{token}}
+###
+GET localhost:80/v2/my/house
+Authorization: Bearer {{token}}
+###
+GET localhost:80/v2/my/area
+Authorization: Bearer {{token}}
+###
+GET localhost:80/v2/my/device/4
+Authorization: Bearer {{token}}
+###
