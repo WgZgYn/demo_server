@@ -9,18 +9,19 @@ use crate::utils::config::DataBaseConfig;
 use deadpool_postgres::{Pool, PoolError};
 use std::ops::Deref;
 use std::sync::Arc;
+use log::debug;
 use tokio_postgres::Error;
 use crate::dto::http::request::UserInfoUpdate;
 
 pub struct Session(deadpool_postgres::Client);
 
-impl Deref for Session {
-    type Target = deadpool_postgres::Client;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+// impl Deref for Session {
+//     type Target = deadpool_postgres::Client;
+// 
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 
 pub struct DataBase {
     pool: Pool,
@@ -47,7 +48,7 @@ impl Session {
         account_id: i32,
     ) -> Result<Vec<HouseDevices>, PoolError> {
         let mut houses_devices = Vec::<HouseDevices>::new();
-        let rows = self
+        let rows = self.0
             .query(
                 "SELECT * FROM account_devices_view WHERE account_id = $1;",
                 &[&account_id],
@@ -98,7 +99,7 @@ impl Session {
                 &mut areas_devices.last_mut().unwrap().devices
             };
 
-            let have_devices: Option<i32> = row.get("devices_id");
+            let have_devices: Option<i32> = row.get("device_id");
             if have_devices.is_none() {
                 continue
             }
@@ -181,7 +182,7 @@ impl Session {
     }
 
     pub async fn get_account_info_by_id(&self, account_id: i32) -> Result<AccountInfo, PoolError> {
-        let client = self;
+        let client = &self.0;
         let row = client
             .query_one(
                 "SELECT username FROM account WHERE account_id = $1",
@@ -195,7 +196,7 @@ impl Session {
     }
 
     pub async fn get_user_info(&self, account_id: i32) -> Result<UserInfo, PoolError> {
-        let row = self
+        let row = self.0
             .query_one(
                 "SELECT * FROM user_info WHERE account_id = $1;",
                 &[&account_id],
@@ -211,7 +212,7 @@ impl Session {
     }
 
     pub async fn get_all_house_info(&self, account_id: i32) -> Result<Vec<HouseInfo>, PoolError> {
-        let rows = self
+        let rows = self.0
             .query(
                 "SELECT * FROM member JOIN house USING(house_id) WHERE account_id = $1;",
                 &[&account_id],
@@ -227,7 +228,7 @@ impl Session {
     }
 
     pub async fn get_all_area_info(&self, account_id: i32) -> Result<Vec<AreaInfo>, PoolError> {
-        let rows = self
+        let rows = self.0
             .query(
                 "SELECT * FROM member JOIN area USING(house_id) WHERE account_id = $1;",
                 &[&account_id],
@@ -245,7 +246,7 @@ impl Session {
         &self,
         username: &str,
     ) -> Result<(i32, String), PoolError> {
-        let client = self;
+        let client = &self.0;
         let row = client
             .query_one(
                 "SELECT password_hash, account_id FROM account WHERE username = $1",
@@ -260,7 +261,7 @@ impl Session {
         account_id: i32,
         username: String,
     ) -> Result<String, PoolError> {
-        self.execute(
+        self.0.execute(
             "UPDATE account SET last_login=CURRENT_TIMESTAMP WHERE account_id = $1",
             &[&account_id],
         )
@@ -275,7 +276,7 @@ impl Session {
         password_hash: &'a str,
         salt: &[u8],
     ) -> Result<(), PoolError> {
-        self.execute(
+        self.0.execute(
             "INSERT INTO account \
                 (username, password_hash, salt) \
                 VALUES ($1, $2, $3)",
@@ -293,7 +294,7 @@ impl Session {
         age: Option<i32>,
         email: Option<String>,
     ) -> Result<u64, Error> {
-        self.execute(
+        self.0.execute(
             "INSERT INTO user_info \
             (account_id, gender, city, age, email) \
             VALUES($1, $2, $3, $4, $5)",
@@ -302,62 +303,85 @@ impl Session {
             .await
     }
 
-    pub async fn update_user_info(&self, mut user_info: UserInfoUpdate, account_id: i32) -> Result<u64, Box<dyn std::error::Error>> {
-        let mut old_info = match self.get_user_info(account_id).await {
+    pub async fn update_user_info(
+        &self,
+        user_info: UserInfoUpdate,
+        account_id: i32,
+    ) -> Result<u64, Box<dyn std::error::Error>> {
+        debug!("{:#?}", &user_info);
+
+        // 获取旧数据，如果用户不存在，则添加新记录
+        let old_info = match self.get_user_info(account_id).await {
             Ok(v) => v,
             Err(_) => {
-                return Ok(self.add_user_info(
-                    account_id,
-                    user_info.gender,
-                    user_info.city,
-                    user_info.age,
-                    user_info.email,
-                ).await?)
+                return Ok(self
+                    .add_user_info(
+                        account_id,
+                        user_info.gender,
+                        user_info.city,
+                        user_info.age,
+                        user_info.email,
+                    )
+                    .await?)
             }
         };
 
-        if old_info.gender.is_some() {
-            user_info.gender = old_info.gender.take();
+        // 动态构建 SQL 语句
+        let mut query = String::from("UPDATE user_info SET ");
+        let mut params: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![];
+        let mut param_index = 1; // SQL 参数占位符从 $1 开始
+
+        if let Some(gender) = user_info.gender.as_ref().or(old_info.gender.as_ref()) {
+            query.push_str(&format!("gender = ${}, ", param_index));
+            params.push(gender); // 引用的生命周期由 as_ref 确保
+            param_index += 1;
+        }
+        if let Some(city) = user_info.city.as_ref().or(old_info.city.as_ref()) {
+            query.push_str(&format!("city = ${}, ", param_index));
+            params.push(city); // 同上
+            param_index += 1;
+        }
+        if let Some(age) = user_info.age.as_ref().or(old_info.age.as_ref()) {
+            query.push_str(&format!("age = ${}, ", param_index));
+            params.push(age);
+            param_index += 1;
+        }
+        if let Some(email) = user_info.email.as_ref().or(old_info.email.as_ref()) {
+            query.push_str(&format!("email = ${}, ", param_index));
+            params.push(email); // 同上
+            param_index += 1;
         }
 
-        if old_info.city.is_some() {
-            user_info.city = old_info.city.take();
+        // 删除多余的逗号和空格，添加 WHERE 子句
+        if params.is_empty() {
+            return Ok(0); // 如果没有需要更新的字段，则直接返回
         }
+        query.truncate(query.len() - 2);
+        query.push_str(&format!(" WHERE account_id = ${}", param_index));
+        params.push(&account_id);
 
-        if old_info.age.is_some() {
-            user_info.age = old_info.age.take();
-        }
+        debug!("Generated SQL: {}", query);
+        debug!("Params: {:?}", params);
 
-        if old_info.email.is_some() {
-            user_info.email = old_info.email.take();
-        }
-
-        if old_info.name.is_some() {
-            user_info.name = old_info.name.take();
-        }
-
-        let res = self.execute("UPDATE user_info \
-            SET gender = $1, city = $2, age = $3, email = $4 \
-            WHERE account_id = $5",
-                               &[&account_id, &user_info.gender, &user_info.city, &user_info.age, &user_info.email],
-        )
-            .await?;
+        // 执行动态构建的 SQL 语句
+        let res = self.0.execute(&query, &params).await?;
         Ok(res)
     }
+
     pub async fn add_area_by(
         &self,
         area_name: &str,
         house_id: i32,
         account_id: i32,
     ) -> Result<u64, Error> {
-        self.execute(
+        self.0.execute(
             "INSERT INTO area (area_name, house_id, created_by) VALUES ($1, $2, $3)",
             &[&area_name, &house_id, &account_id],
         )
             .await
     }
     pub async fn add_house_by(&self, house_name: &str, account_id: i32) -> Result<u64, Error> {
-        self.execute(
+        self.0.execute(
             "INSERT INTO house (house_name, created_by) VALUES ($1, $2)",
             &[&house_name, &account_id],
         )
@@ -372,7 +396,7 @@ impl Session {
         model_id: i32,
         account_id: i32,
     ) -> Result<u64, Error> {
-        self.execute(
+        self.0.execute(
             "INSERT INTO device\
             (device_name, efuse_mac, area_id, created_by, model_id) \
             VALUES ($1, $2, $3, $4, $5, $6)",
@@ -381,8 +405,16 @@ impl Session {
             .await
     }
 
+    pub async fn get_device_mac_by_id(&self, device_id: i32) -> Result<String, PoolError> {
+        let row = self.0.query_one(
+            "SELECT efuse_mac FROM device WHERE device_id = $1",
+            &[&device_id],
+        )
+            .await?;
+        Ok(row.get("efuse_mac"))
+    }
     pub async fn get_device_id_by_mac(&self, efuse_mac: &str) -> Result<i32, PoolError> {
-        let row = self.query_one(
+        let row = self.0.query_one(
             "SELECT device_id FROM device WHERE efuse_mac = $1",
             &[&efuse_mac],
         )
@@ -392,7 +424,7 @@ impl Session {
 
     // TODO: use account_devices_view instead
     pub async fn get_device_info(&self, device_id: i32) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
-        let rows = self.query("SELECT * FROM device d \
+        let rows = self.0.query("SELECT * FROM device d \
         JOIN device_model m USING(model_id) \
         JOIN device_type t USING(type_id) \
         JOIN device_control c USING(model_id) \
