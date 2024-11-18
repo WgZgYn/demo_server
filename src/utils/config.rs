@@ -22,9 +22,16 @@ pub struct MqttConfig {
 }
 
 #[derive(Deserialize)]
+pub struct ActixConfig {
+    pub ip: String,
+    pub port: u16,
+}
+
+#[derive(Deserialize)]
 pub struct GlobalConfig {
     pub database: DataBaseConfig,
     pub mqtt: MqttConfig,
+    pub actix: ActixConfig,
 }
 
 pub fn read_config() -> Result<GlobalConfig, Box<dyn Error>> {
