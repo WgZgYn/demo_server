@@ -60,8 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // .configure(config_web) // vue static dist
             // .configure(config_redirects)
     })
-    .bind("0.0.0.0:8123")?
-    .bind_openssl("0.0.0.0:443", ssl)?
+    .bind(format!("{ip}:{port}", ip = &cfg.actix.ip, port = &cfg.actix.port))?
+    .bind_openssl(format!("{}:443", &cfg.actix.ip), ssl)?
     .run()
     .await?;
     Ok(())
