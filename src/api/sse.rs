@@ -1,18 +1,13 @@
-use crate::api::auth::Claims;
 use crate::data::sse::SseHandler;
+use crate::security::auth::Claims;
 use actix_web::web::Bytes;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use deadpool_postgres::Pool;
 use log::info;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::sleep;
 
-pub async fn sse_account(
-    data: web::Data<Pool>,
-    sse: web::Data<RwLock<SseHandler>>,
-    req: HttpRequest,
-) -> HttpResponse {
+pub async fn sse_account(sse: web::Data<RwLock<SseHandler>>, req: HttpRequest) -> HttpResponse {
     let e = req.extensions();
     let claims = e.get::<Claims>().unwrap();
     let account_id = claims.id();

@@ -1,9 +1,8 @@
-pub mod area;
+mod cache_database;
+mod data;
 mod database;
-pub mod device;
-pub mod house;
+mod memory;
 pub mod pool;
-pub mod user_info;
 
 use tokio_postgres::Row;
 
@@ -13,4 +12,6 @@ pub type QueryType = Result<Vec<Row>, tokio_postgres::Error>;
 pub type QueryOneType = Result<Row, tokio_postgres::Error>;
 pub type ExecuteType = Result<u64, tokio_postgres::Error>;
 
-pub use database::{CachedDataBase, DataBase};
+pub use cache_database::CachedDataBase;
+pub use database::DataBase;
+pub use memory::Memory;

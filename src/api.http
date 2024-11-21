@@ -45,7 +45,7 @@ Authorization: Bearer {{remote-rust-token}}
 ###
 
 ###
-POST localhost:80/v2/login
+POST localhost:8123/api/login
 Content-Type: application/json
 
 {
@@ -56,15 +56,37 @@ Content-Type: application/json
 > {% client.global.set("token", response.body.data.token); %}
 
 ###
-GET localhost:80/v2/my/device
+GET localhost:8123/api/my/device
 Authorization: Bearer {{token}}
 ###
-GET localhost:80/v2/my/house
+GET localhost:8123/api/my/house
 Authorization: Bearer {{token}}
 ###
-GET localhost:80/v2/my/area
+GET localhost:8123/api/my/area
 Authorization: Bearer {{token}}
 ###
-GET localhost:80/v2/my/device/4
+GET localhost:8123/api/my/device/4
 Authorization: Bearer {{token}}
 ###
+GET localhost:8123/api/userinfo
+Authorization: Bearer {{token}}
+###
+POST localhost:8123/api/userinfo
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "age": 19
+}
+###
+GET localhost:8123/api/my/device/4/service/open
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/my/device/4/service/close
+Authorization: Bearer {{token}}
+###
+POST localhost:8123/api/my/device/4/service/light
+Authorization: Bearer {{token}}
+Content-Type: text/plain
+
+100

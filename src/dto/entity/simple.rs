@@ -19,6 +19,14 @@ pub struct AreaInfo {
     pub area_name: String,
 }
 
+#[derive(Deserialize)]
+pub struct DeviceAdd {
+    pub device_mac: String,
+    pub device_name: String,
+    pub model_id: i32,
+    pub area_id: i32,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub device_id: i32,
@@ -37,7 +45,15 @@ pub struct DeviceType {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MemberInfo {}
+pub struct MemberInfo {
+    pub houses_member: Vec<HouseMember>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct HouseMember {
+    pub house_info: HouseInfo,
+    pub account: Vec<AccountInfo>,
+}
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct UserInfo {

@@ -1,7 +1,7 @@
 mod ping;
 mod test_auth;
 
-use crate::api::auth::Auth;
+use crate::security::auth::Auth;
 use crate::utils;
 use actix_web::web::ServiceConfig;
 use actix_web::{web, HttpResponse};

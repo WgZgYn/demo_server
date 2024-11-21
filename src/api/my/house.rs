@@ -1,93 +1,136 @@
-use crate::api::auth::Claims;
-use crate::db::house::{add_house, query_house};
-use crate::template::template::{claims_template, claims_with_data_template};
-use crate::utils;
-use crate::utils::Response;
-use actix_web::{web, HttpRequest, HttpResponse};
-use deadpool_postgres::{Object, Pool};
-use log::error;
-use serde::{Deserialize, Serialize};
+pub mod root {
+    use crate::db::DataBase;
+    use crate::dto::http::request::HouseAdd;
+    use crate::security::auth::Claims;
+    use crate::utils;
+    use crate::utils::Response;
+    use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+    use log::error;
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct AddHouse {
-    house_name: String,
-}
-pub async fn add_house_api(
-    body: web::Json<AddHouse>,
-    pool: web::Data<Pool>,
-    req: HttpRequest,
-) -> HttpResponse {
-    claims_with_data_template(
-        body,
-        pool,
-        req,
-        Box::new(|body, claims, client| Box::pin(add(body.into_inner(), claims, client))),
-    )
-    .await
-}
-
-async fn add(body: AddHouse, claims: Claims, client: Object) -> HttpResponse {
-    match add_house(client, &body.house_name, claims.id()).await {
-        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => {
-            error!("{e}");
-            HttpResponse::InternalServerError().json(utils::Result::error("database error"))
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct QueryHouseResponse {
-    house_name: String,
-    house_id: i32,
-}
-impl QueryHouseResponse {
-    fn new(house_name: String, house_id: i32) -> QueryHouseResponse {
-        QueryHouseResponse {
-            house_name,
-            house_id,
-        }
-    }
-}
-
-pub async fn query_house_api(pool: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
-    claims_template(
-        pool,
-        req,
-        Box::new(|claims, client| Box::pin(query(claims, client))),
-    )
-    .await
-}
-
-// TODO:
-pub async fn update_house_api() -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-// TODO:
-pub async fn delete_house_api(pool: web::Data<Pool>) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-async fn query(claims: Claims, client: Object) -> HttpResponse {
-    match query_house(client, claims.id()).await {
-        Ok(rows) => {
-            let mut data = Vec::new();
-            for row in rows {
-                data.push(QueryHouseResponse::new(
-                    row.get("house_name"),
-                    row.get("house_id"),
-                ));
+    pub async fn get_all_house_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
+        match db.get_session().await {
+            Ok(session) => match session.get_all_house_info(claims.id()).await {
+                Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            },
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
             }
-            HttpResponse::Ok().json(Response::success(data))
         }
-        Err(e) => {
-            error!("{e}");
-            HttpResponse::InternalServerError().json(utils::Result::error("database error"))
+    }
+
+    pub async fn add_house(
+        data: web::Json<HouseAdd>,
+        req: HttpRequest,
+        db: web::Data<DataBase>,
+    ) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
+        let account_id = claims.id();
+
+        let mut session = match db.get_session().await {
+            Ok(session) => session,
+            Err(e) => {
+                error!("{e}");
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+
+        match session.add_house(&data.house_name, account_id).await {
+            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        }
+    }
+
+    pub mod id {
+        use crate::db::DataBase;
+        use crate::dto::entity::simple::HouseInfo;
+        use crate::dto::http::request::HouseUpdate;
+        use crate::utils;
+        use crate::utils::Response;
+        use actix_web::{web, HttpRequest, HttpResponse};
+        use log::error;
+        use std::error::Error;
+        use std::future::Future;
+
+        pub async fn get_house_info(
+            data: web::Path<i32>,
+            db: web::Data<DataBase>,
+            req: HttpRequest,
+        ) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+            match session.get_house_info(data.into_inner()).await {
+                Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::NotFound().finish()
+                }
+            }
+        }
+
+        pub async fn update_house_info(
+            id: web::Path<i32>,
+            data: web::Json<HouseUpdate>,
+            db: web::Data<DataBase>,
+            req: HttpRequest,
+        ) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session
+                .update_house_info(id.into_inner(), data.into_inner())
+                .await
+            {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+
+        pub async fn delete_house(id: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session.delete_house(id.into_inner()).await {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
         }
     }
 }
-
-async fn delete() {}
-
-async fn update() {}

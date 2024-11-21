@@ -55,6 +55,7 @@ pub fn create_token(user: String, role: Role, id: i32) -> String {
     let token = encode(
         &Header::default(),
         &claims,
+        // This can be lazy init
         &EncodingKey::from_secret(SECRET_KEY),
     )
     .unwrap();

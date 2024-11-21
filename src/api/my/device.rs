@@ -1,275 +1,215 @@
-use crate::api::auth::Claims;
-use crate::data::device::DeviceStatus;
-use crate::db::device::{add_device, show_device};
-use crate::template::template::{claims_template, claims_with_data_template};
-use crate::utils;
-use crate::utils::Response;
-use actix_web::{web, HttpRequest, HttpResponse};
-use deadpool_postgres::{Object, Pool};
-use log::error;
-use rumqttc::{AsyncClient, QoS};
-use serde::{Deserialize, Serialize};
+pub mod root {
+    use crate::db::{DataBase, Memory};
+    use crate::dto::entity::simple::{DeviceAdd, DeviceInfo};
+    use crate::dto::mqtt::HostMessage;
+    use crate::security::auth::Claims;
+    use crate::service::send_host_message;
+    use crate::utils;
+    use crate::utils::Response;
+    use actix_web::http::header::CONTENT_TYPE;
+    use actix_web::http::Method;
+    use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+    use log::error;
+    use rumqttc::AsyncClient;
 
-pub async fn add_device_api(
-    body: web::Json<AddDevice>,
-    pool: web::Data<Pool>,
-    req: HttpRequest,
-) -> HttpResponse {
-    claims_with_data_template(
-        body,
-        pool,
-        req,
-        Box::new(|body, claims, client| Box::pin(add(body.into_inner(), claims, client))),
-    )
-    .await
-}
+    pub async fn get_all_devices(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
 
-pub async fn query_devices_api(pool: web::Data<Pool>, req: HttpRequest) -> HttpResponse {
-    claims_template(
-        pool,
-        req,
-        Box::new(|claims, client| Box::pin(query(client, claims))),
-    )
-    .await
-}
-
-// TODO:
-pub async fn update_device_api() -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-// TODO:
-pub async fn delete_device_api() -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-pub async fn device_service_api(
-    pool: web::Data<Pool>,
-    client: web::Data<AsyncClient>,
-    path: web::Path<(i32, String)>,
-    req: HttpRequest,
-) -> HttpResponse {
-    claims_with_data_template(
-        (path, client),
-        pool,
-        req,
-        Box::new(|body, claims, client| Box::pin(device_service(client, claims, body))),
-    )
-    .await
-}
-
-pub async fn device_status_api(
-    memory: web::Data<DeviceStatus>,
-    path: web::Path<i32>,
-) -> HttpResponse {
-    if let Some(v) = memory.status(*path) {
-        HttpResponse::Ok().json(Response::success(v))
-    } else {
-        HttpResponse::NotFound().finish()
-    }
-}
-
-async fn add(body: AddDevice, claims: Claims, client: Object) -> HttpResponse {
-    match add_device(
-        client,
-        &body.device_name,
-        &body.efuse_mac,
-        &body.chip_model,
-        body.type_id,
-        body.area_id,
-        claims.id(),
-    )
-    .await
-    {
-        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => {
-            error!("{e}");
-            HttpResponse::InternalServerError().json(utils::Result::error("database error"))
-        }
-    }
-}
-
-async fn query(client: Object, claims: Claims) -> HttpResponse {
-    let account_id = claims.id();
-    match show_device(client, account_id).await {
-        Ok(rows) => {
-            let mut ad: Vec<HouseDevices> = Vec::new();
-
-            for row in rows {
-                let house_id: i32 = row.get("house_id");
-                let house_name = row.get("house_name");
-                let area_id: i32 = row.get("area_id");
-                let area_name = row.get("area_name");
-                let device_id = row.get("device_id");
-                let device_name = row.get("device_name");
-                let efuse_mac = row.get("efuse_mac");
-                let model_name = row.get("model_name");
-                let type_id = row.get("type_id");
-                let type_name = row.get("type_name");
-                let parameter: Option<serde_json::Value> = row.get("parameter");
-                let mut s = Vec::new();
-                if parameter.is_some() {
-                    s.push(parameter.unwrap());
-                }
-                if let Some(house) = ad.iter_mut().find(|h| h.house_id == house_id) {
-                    match house
-                        .areas_devices
-                        .iter_mut()
-                        .find(|a| a.area_name == area_name)
-                    {
-                        Some(area) => {
-                            match area.devices.iter_mut().find(|d| d.device_id == device_id) {
-                                Some(d) => d.service.append(&mut s),
-                                None => area.devices.push(Device {
-                                    device_id,
-                                    device_name,
-                                    efuse_mac,
-                                    model_name,
-                                    device_type: DeviceType { type_id, type_name },
-                                    service: s,
-                                }),
-                            }
-                        }
-                        None => {
-                            house.areas_devices.push(AreaDevices {
-                                area_id,
-                                area_name,
-                                devices: vec![Device {
-                                    device_id,
-                                    device_name,
-                                    efuse_mac,
-                                    model_name,
-                                    device_type: DeviceType { type_id, type_name },
-                                    service: s,
-                                }],
-                            });
-                        }
-                    }
-                } else {
-                    ad.push(HouseDevices {
-                        house_id,
-                        house_name,
-                        areas_devices: vec![AreaDevices {
-                            area_id,
-                            area_name,
-                            devices: vec![Device {
-                                device_id,
-                                device_name,
-                                efuse_mac,
-                                model_name,
-                                device_type: DeviceType { type_id, type_name },
-                                service: s,
-                            }],
-                        }],
-                    });
-                }
+        let session = match db.get_session().await {
+            Ok(session) => session,
+            Err(e) => {
+                error!("{}", e);
+                return HttpResponse::InternalServerError().finish();
             }
-            HttpResponse::Ok().json(Response::success(ShowDevices { houses_devices: ad }))
-        }
-        Err(e) => {
-            error!("{e}");
-            HttpResponse::InternalServerError().json(utils::Result::error("database error"))
+        };
+
+        match session
+            .get_account_devices(claims.id(), claims.sub().to_string())
+            .await
+        {
+            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+            Err(e) => {
+                error!("{}", e);
+                return HttpResponse::NotFound().json(utils::Result::error("No such Account"));
+            }
         }
     }
-}
+    pub async fn add_device(
+        data: web::Json<DeviceAdd>,
+        db: web::Data<DataBase>,
+        req: HttpRequest,
+    ) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
 
-// TODO:
-async fn delete() {}
+        let session = match db.get_session().await {
+            Ok(session) => session,
+            Err(e) => {
+                error!("{}", e);
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
 
-// TODO:
-async fn update() {}
+        let DeviceAdd {
+            device_mac,
+            device_name,
+            area_id,
+            model_id,
+        } = data.into_inner();
+        match session
+            .add_device(&device_name, &device_mac, area_id, claims.id(), model_id)
+            .await
+        {
+            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        }
+    }
 
-async fn device_service(
-    client: Object,
-    claims: Claims,
-    data: (web::Path<(i32, String)>, web::Data<AsyncClient>),
-) -> HttpResponse {
-    let (path, mqtt) = data;
-    let (device_id, service_name) = path.into_inner();
-    let account_id = claims.id();
+    pub mod id {
+        use crate::db::DataBase;
+        use crate::dto::http::request::DeviceUpdate;
+        use crate::security::auth::Claims;
+        use crate::utils::Response;
+        use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+        use log::error;
 
-    match client
-        .query_one(
-            "\
-        SELECT *
-        FROM member
-        JOIN account USING(account_id)
-        JOIN area ON area.house_id = member.house_id
-        JOIN device ON area.area_id = device.area_id
-        WHERE device_id = $1 AND account_id = $2
-    ",
-            &[&device_id, &account_id],
-        )
-        .await
-    {
-        Ok(row) => {
-            let mac: String = row.get("efuse_mac");
-            match mqtt
-                .publish(
-                    format!("/device/{}/service", mac),
-                    QoS::ExactlyOnce,
-                    false,
-                    service_name,
-                )
-                .await
-            {
-                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+        pub async fn get_device_info(
+            req: HttpRequest,
+            path: web::Path<i32>,
+            db: web::Data<DataBase>,
+        ) -> HttpResponse {
+            let e = req.extensions();
+            let claims = match e.get::<Claims>() {
+                Some(claims) => claims,
+                None => return HttpResponse::Unauthorized().finish(),
+            };
+
+            match db.get_session().await {
+                Ok(session) => match session.get_device_info(*path).await {
+                    Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                    Err(e) => HttpResponse::NotFound().json(e.to_string()),
+                },
                 Err(e) => {
                     error!("{e}");
-                    HttpResponse::InternalServerError().json(utils::Result::error("mqtt error"))
+                    HttpResponse::InternalServerError().finish()
                 }
             }
         }
-        Err(e) => HttpResponse::InternalServerError().json(utils::Result::error(&format!("{e}"))),
+
+        pub async fn update_device_info(
+            data: web::Json<DeviceUpdate>,
+            db: web::Data<DataBase>,
+        ) -> HttpResponse {
+            // TODO:
+            HttpResponse::NotFound().finish()
+        }
+
+        pub async fn delete_device(data: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
+            // TODO:
+            HttpResponse::NotFound().finish()
+        }
+        pub mod status {
+            use crate::db::Memory;
+            use crate::utils::Response;
+            use actix_web::{web, HttpResponse};
+
+            pub async fn get_device_status(
+                path: web::Path<i32>,
+                memory: web::Data<Memory>,
+            ) -> HttpResponse {
+                let guard = memory.device_state.read().await;
+                match guard.status(path.into_inner()) {
+                    Some(v) => HttpResponse::Ok().json(Response::success(v)),
+                    None => HttpResponse::NotFound().finish(),
+                }
+            }
+        }
+
+        pub mod service {
+            use crate::db::DataBase;
+            use crate::dto::mqtt::HostMessage;
+            use crate::security::auth::Claims;
+            use crate::service::send_host_message;
+            use crate::utils;
+            use actix_web::http::header::CONTENT_TYPE;
+            use actix_web::http::Method;
+            use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+            use actix_web::web::Payload;
+            use log::error;
+            use rumqttc::AsyncClient;
+
+            pub async fn execute_device_service(
+                req: HttpRequest,
+                service: web::Path<(i32, String)>,
+                mqtt: web::Data<AsyncClient>,
+                body: Payload,
+                db: web::Data<DataBase>,
+            ) -> HttpResponse {
+                let e = req.extensions();
+                let claims = match e.get::<Claims>() {
+                    Some(claims) => claims,
+                    None => return HttpResponse::Unauthorized().finish(),
+                };
+                // TODO: judge
+
+                let (device_id, service_name) = service.into_inner();
+                println!("{device_id} {service_name}");
+
+                let session = match db.get_session().await {
+                    Ok(session) => session,
+                    Err(e) => {
+                        error!("{}", e);
+                        return HttpResponse::InternalServerError().finish();
+                    }
+                };
+
+                let mac = match session.get_device_mac_by_id(device_id).await {
+                    Ok(mac) => mac,
+                    Err(e) => {
+                        error!("{e}");
+                        return HttpResponse::NotFound()
+                            .json(utils::Result::error("no such device"));
+                    }
+                };
+
+                let content_type = req
+                    .headers()
+                    .get(CONTENT_TYPE)
+                    .and_then(|ct| ct.to_str().ok());
+                let body = body.to_bytes().await.unwrap_or_default().to_vec();
+                let message = match *req.method() {
+                    Method::POST => match content_type {
+                        Some("application/json") => HostMessage::json(service_name, body),
+                        Some("text/plain") => HostMessage::text(service_name, body),
+                        _ => {
+                            return HttpResponse::BadRequest()
+                                .json(utils::Result::error("unsupported content-type"));
+                        }
+                    },
+                    Method::GET => HostMessage::none(service_name),
+                    _ => {
+                        return HttpResponse::BadRequest()
+                            .json(utils::Result::error("unsupported method"))
+                    }
+                };
+                match send_host_message(mqtt, &mac, message).await {
+                    Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                    Err(e) => {
+                        error!("{e}");
+                        HttpResponse::InternalServerError().finish()
+                    }
+                }
+            }
+        }
     }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct AddDevice {
-    device_name: String,
-    area_id: i32,
-    type_id: i32,
-    efuse_mac: String,
-    chip_model: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct DeviceType {
-    type_id: i32,
-    type_name: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct Device {
-    device_id: i32,
-    device_name: String,
-    efuse_mac: String,
-    model_name: String,
-    device_type: DeviceType,
-    service: Vec<serde_json::Value>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct AreaDevices {
-    area_id: i32,
-    area_name: String,
-    devices: Vec<Device>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct HouseDevices {
-    house_id: i32,
-    house_name: String,
-    areas_devices: Vec<AreaDevices>,
-}
-
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Hash)]
-struct House {
-    house_id: i32,
-    house_name: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct ShowDevices {
-    houses_devices: Vec<HouseDevices>,
 }

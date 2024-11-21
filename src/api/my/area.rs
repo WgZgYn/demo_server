@@ -1,121 +1,115 @@
-use crate::api::auth::Claims;
-use crate::db::area::{add_area, query_area};
-use crate::template::template::claims_with_data_template;
-use crate::utils;
-use crate::utils::Response;
-use actix_web::{web, HttpRequest, HttpResponse};
-use deadpool_postgres::{Object, Pool};
-use log::error;
-use serde::{Deserialize, Serialize};
+pub mod root {
+    use crate::db::DataBase;
+    use crate::dto::http::request::AreaAdd;
+    use crate::security::auth::Claims;
+    use crate::utils;
+    use crate::utils::Response;
+    use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+    use log::error;
 
-pub async fn add_area_api(
-    body: web::Json<AddArea>,
-    req: HttpRequest,
-    pool: web::Data<Pool>,
-) -> HttpResponse {
-    claims_with_data_template(
-        body,
-        pool,
-        req,
-        Box::new(|body, claims, client| Box::pin(add(body.into_inner(), claims, client))),
-    )
-    .await
-}
+    pub async fn get_all_area_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
 
-pub async fn query_area_api(
-    pool: web::Data<Pool>,
-    body: web::Json<QueryArea>,
-    req: HttpRequest,
-) -> HttpResponse {
-    claims_with_data_template(
-        body,
-        pool,
-        req,
-        Box::new(|body, claims, client| Box::pin(query(body.into_inner(), claims, client))),
-    )
-    .await
-}
-
-// TODO:
-pub async fn update_area_api(
-    pool: web::Data<Pool>,
-    body: web::Json<QueryArea>,
-    req: HttpRequest,
-) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-// TODO:
-pub async fn delete_area_api(
-    pool: web::Data<Pool>,
-    body: web::Json<AreaId>,
-    req: HttpRequest,
-) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-async fn add(body: AddArea, claims: Claims, client: Object) -> HttpResponse {
-    match add_area(client, &body.area_name, body.house_id, claims.id()).await {
-        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => {
-            error!("Failed to insert area: {:?}", e);
-            HttpResponse::InternalServerError()
-                .json(utils::Result::error("database connection error"))
-        }
-    }
-}
-
-async fn query(body: QueryArea, _claims: Claims, client: Object) -> HttpResponse {
-    match query_area(client, body.house_id).await {
-        Ok(rows) => {
-            let mut data = Vec::new();
-            for row in rows {
-                data.push(QueryAreaResponse::new(
-                    row.get("area_name"),
-                    row.get("area_id"),
-                ));
+        match db.get_session().await {
+            Ok(session) => match session.get_all_area_info(claims.id()).await {
+                Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            },
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
             }
-            HttpResponse::Ok().json(Response::success(data))
         }
-        Err(e) => {
-            error!("Failed to query area: {:?}", e);
-            HttpResponse::InternalServerError()
-                .json(utils::Result::error("database connection error"))
+    }
+
+    pub async fn add_area(
+        data: web::Json<AreaAdd>,
+        req: HttpRequest,
+        db: web::Data<DataBase>,
+    ) -> HttpResponse {
+        let e = req.extensions();
+        let claims = match e.get::<Claims>() {
+            Some(claims) => claims,
+            None => return HttpResponse::Unauthorized().finish(),
+        };
+        let account_id = claims.id();
+
+        let session = match db.get_session().await {
+            Ok(session) => session,
+            Err(e) => {
+                error!("{e}");
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+
+        match session
+            .add_area(&data.area_name, data.house_id, account_id)
+            .await
+        {
+            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        }
+    }
+    pub mod id {
+        use crate::db::DataBase;
+        use crate::dto::http::request::AreaUpdate;
+        use crate::utils::Response;
+        use actix_web::{web, HttpRequest, HttpResponse};
+        use deadpool_postgres::PoolError;
+        use log::error;
+        use crate::utils;
+
+        pub async fn get_area_info(
+            data: web::Path<i32>,
+            db: web::Data<DataBase>,
+            req: HttpRequest,
+        ) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+            match session.get_area_info(data.into_inner()).await {
+                Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::NotFound().finish()
+                }
+            }
+        }
+        pub async fn update_area_info(
+            data: web::Json<AreaUpdate>,
+            db: web::Data<DataBase>,
+            req: HttpRequest,
+        ) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session.update_area_info(data.into_inner()).await {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+            }
+        }
+        pub async fn delete_area() -> HttpResponse {
+            // TODO:
+            HttpResponse::NotFound().finish()
         }
     }
 }
-
-async fn delete() {}
-
-async fn update() {}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct AddArea {
-    area_name: String,
-    house_id: i32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct QueryArea {
-    house_id: i32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct QueryAreaResponse {
-    area_name: String,
-    area_id: i32,
-}
-impl QueryAreaResponse {
-    pub fn new(area_name: String, area_id: i32) -> Self {
-        Self { area_name, area_id }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct UpdateArea {
-    area_id: i32,
-    area_name: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct AreaId(i32);

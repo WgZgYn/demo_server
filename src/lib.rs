@@ -4,6 +4,5 @@ pub mod db;
 pub mod dto;
 pub mod security;
 pub mod service;
-pub mod template;
 pub mod utils;
 pub mod web;

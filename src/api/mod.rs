@@ -1,20 +1,21 @@
-use crate::api::auth::{validator, Auth};
-use crate::api::login::{login, login_token};
-use crate::api::my::{config_my, config_my_v2};
-use crate::api::signup::signup;
+use crate::api::my::{config_my, login, signup};
 use crate::api::sse::sse_account;
 use crate::api::test::config_test;
-use actix_web::web;
-use actix_web_httpauth::middleware::HttpAuthentication;
-use crate::api::v2::{get_user_info, update_user_info};
+use crate::db::DataBase;
+use crate::dto::http::request::UserInfoUpdate;
+use crate::security::auth::{Auth, Claims};
+use crate::utils;
+use crate::utils::Response;
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use log::error;
 
-pub mod auth;
-pub mod login;
 pub mod my;
-pub mod signup;
 mod sse;
 pub mod test;
-mod v2;
+
+pub async fn login_token() -> HttpResponse {
+    HttpResponse::Ok().json(utils::Result::success())
+}
 
 pub fn config_api(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -26,34 +27,80 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
             )
             .route("/login", web::post().to(login))
             .route("/signup", web::post().to(signup))
-            .configure(config_my)
-            .service(web::scope("/sse").route("", web::get().to(sse_account)))
-            .service(web::resource("/task").wrap(Auth))
-            .service(web::scope("/device").wrap(HttpAuthentication::bearer(validator)))
-            .configure(config_test),
-    );
-}
-
-pub fn config_api_v2(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/api")
             .service(
-                web::resource("/auth")
+                web::resource("/account")
                     .wrap(Auth)
-                    .route(web::get().to(login_token)),
+                    .route(web::delete().to(delete_account))
             )
-            .route("/login", web::post().to(v2::login))
-            .route("/signup", web::post().to(v2::signup))
             .service(
                 web::resource("/userinfo")
+                    .wrap(Auth)
                     .route(web::get().to(get_user_info))
-                    .route(web::post().to(update_user_info))
+                    .route(web::post().to(update_user_info)),
             )
             .service(
                 web::scope("/sse")
                     .wrap(Auth)
-                    .route("", web::get().to(sse_account))
+                    .route("", web::get().to(sse_account)),
             )
-            .configure(config_my_v2),
+            .configure(config_my)
+            .configure(config_test),
     );
+}
+
+pub async fn get_user_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+    match db.get_session().await {
+        Ok(session) => match session.get_user_info(claims.id()).await {
+            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn update_user_info(
+    req: HttpRequest,
+    data: web::Json<UserInfoUpdate>,
+    db: web::Data<DataBase>,
+) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    match db.get_session().await {
+        Ok(session) => {
+            match session
+                .update_user_info(data.into_inner(), claims.id())
+                .await
+            {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+// TODO:
+async fn delete_account() -> HttpResponse {
+    HttpResponse::Ok().finish()
 }
