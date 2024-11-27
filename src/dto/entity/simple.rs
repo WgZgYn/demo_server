@@ -46,7 +46,7 @@ pub struct DeviceType {
 
 #[derive(Serialize, Deserialize)]
 pub struct MemberInfo {
-    pub houses_member: Vec<HouseMember>
+    pub houses_member: Vec<HouseMember>,
 }
 
 #[derive(Serialize, Deserialize)]
