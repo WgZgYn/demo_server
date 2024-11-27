@@ -90,6 +90,7 @@ pub mod root {
             }
         }
         pub async fn update_area_info(
+            id: web::Path<i32>,
             data: web::Json<AreaUpdate>,
             db: web::Data<DataBase>,
             req: HttpRequest,
@@ -102,14 +103,24 @@ pub mod root {
                 }
             };
 
-            match session.update_area_info(data.into_inner()).await {
+            match session.update_area_info(data.into_inner(), id.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                 Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
             }
         }
-        pub async fn delete_area() -> HttpResponse {
-            // TODO:
-            HttpResponse::NotFound().finish()
+        pub async fn delete_area(id: web::Path<i32>, db: web::Data<DataBase>, req: HttpRequest) -> HttpResponse {
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session.delete_area(id.into_inner()).await {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+            }
         }
     }
 }
