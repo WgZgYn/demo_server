@@ -100,7 +100,21 @@ pub async fn update_user_info(
     }
 }
 
-// TODO:
-async fn delete_account() -> HttpResponse {
-    HttpResponse::Ok().finish()
+
+async fn delete_account(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    let mut session = match db.get_session().await {
+        Ok(session) => session,
+        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+    };
+
+    match session.delete_account(claims.id()).await {
+        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+    }
 }
