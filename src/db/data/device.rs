@@ -3,6 +3,7 @@ use crate::dto::entity::simple::{AccountInfo, AreaInfo, DeviceInfo, DeviceType, 
 use crate::dto::http::response::{AccountDevices, AreaDevices, HouseDevices};
 use deadpool_postgres::PoolError;
 use tokio_postgres::Error;
+use crate::dto::http::request::DeviceUpdate;
 
 impl Session {
     pub async fn delete_device(&self, device_id: i32) -> Result<u64, Error> {
@@ -240,5 +241,22 @@ impl Session {
             Some(h) => Ok(Some(h)),
             None => Err(format!("no such area: {}", area_id).into()),
         }
+    }
+
+    pub async fn update_device_info(&self, info: DeviceUpdate) -> Result<u64, Error> {
+        let mut p = "UPDATE device SET ".to_string();
+        let mut a = Vec::<&(dyn tokio_postgres::types::ToSql + Sync)>::new();
+
+        if let Some(ref name) = info.device_name {
+            a.push(name);
+            p += &format!("device_name = ${}", a.len());
+        }
+
+        if let Some(ref id) = info.area_id {
+            a.push(id);
+            p += &format!("area_id = ${}", a.len());
+        }
+
+        self.0.execute(&p, &a).await
     }
 }
