@@ -9,10 +9,15 @@ pub struct AccountUpdate {}
 pub struct HouseUpdate {}
 
 #[derive(Deserialize)]
-pub struct AreaUpdate {}
+pub struct AreaUpdate {
+    pub area_name: String,
+}
 
 #[derive(Deserialize)]
-pub struct DeviceUpdate {}
+pub struct DeviceUpdate {
+    pub device_name: Option<String>,
+    pub area_id: Option<i32>
+}
 
 #[derive(Deserialize)]
 pub struct AccountLogin {}
