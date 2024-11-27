@@ -28,7 +28,6 @@ impl Session {
         })
     }
 
-    // TODO:
     pub async fn delete_house(&self, house_id: i32) -> Result<u64, Error> {
         self.0
             .execute("DELETE FROM house WHERE house_id = $1", &[&house_id])

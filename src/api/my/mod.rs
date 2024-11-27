@@ -11,7 +11,7 @@ use crate::api::my::device::root::id::*;
 use crate::api::my::device::root::*;
 use crate::api::my::house::root::id::{delete_house, get_house_info, update_house_info};
 use crate::api::my::house::root::{add_house, get_all_house_info};
-use crate::api::my::scene::{add_scene, delete_scene};
+use crate::api::my::scene::{add_scene, delete_scene, get_scene};
 use crate::api::sse::sse_account;
 use crate::db::{DataBase, Memory};
 use crate::dto::http::request::{AreaAdd, HouseAdd, Login, MemberAdd, MemberDelete, SceneAdd, Signup, UserInfoUpdate};
@@ -28,7 +28,7 @@ use actix_web::web::ServiceConfig;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::{error, info};
 use rumqttc::AsyncClient;
-
+use crate::api::{get_user_info, update_user_info};
 
 pub fn config_my(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -39,21 +39,21 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     .service(
                         web::resource("")
                             .route(web::get().to(get_all_devices))
-                            .route(web::post().to(add_device)),
+                            .route(web::post().to(add_device)), // TODO: Use/Test this api
                     )
                     .service(
                         web::scope("/{id}")
                             .service(
                                 web::resource("")
                                     .route(web::get().to(get_device_info))
-                                    .route(web::patch().to(update_device_info))
-                                    .route(web::delete().to(delete_device)),
+                                    .route(web::patch().to(update_device_info)) // TODO: Use/Test this api
+                                    .route(web::delete().to(delete_device)), // TODO: Use/Test this api
                             )
                             .service(
                                 web::resource("/service/{name}")
                                     .route(web::to(execute_device_service)),
                             )
-                            .route("/status", web::get().to(get_device_status)),
+                            .route("/status", web::get().to(get_device_status)), // TODO: Use/Test this api
                     ),
             )
             .service(
@@ -68,7 +68,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             web::resource("")
                                 .route(web::get().to(get_house_info))
                                 .route(web::patch().to(update_house_info))
-                                .route(web::delete().to(delete_house)),
+                                .route(web::delete().to(delete_house))
                         ),
                     ),
             )
@@ -83,8 +83,8 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                         web::scope("/{id}").service(
                             web::resource("")
                                 .route(web::get().to(get_area_info))
+                                .route(web::patch().to(update_area_info))
                                 .route(web::delete().to(delete_area))
-                                .route(web::patch().to(update_area_info)),
                         ),
                     ),
             )
@@ -94,16 +94,16 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     .route(web::post().to(add_member))
                     .route(web::delete().to(delete_member)),
             )
-            // TODO:
             .service(
                 web::resource("/info")
-                    .route(web::get())
-                    .route(web::patch())
-                    .route(web::put()),
+                    .route(web::get().to(get_user_info))
+                    .route(web::patch().to(update_user_info))
+                    .route(web::put().to(update_user_info)),
             )
             // TODO:
             .service(
                 web::resource("/scene")
+                    .route(web::get().to(get_scene))
                     .route(web::post().to(add_scene))
                     .route(web::delete().to(delete_scene)),
             )
@@ -115,7 +115,10 @@ pub async fn login(data: web::Json<Login>, db: web::Data<DataBase>) -> HttpRespo
     let Login { username, password } = data.into_inner();
     let session = match db.get_session().await {
         Ok(session) => session,
-        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+        Err(e) => {
+            error!("{}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     };
 
     let (account_id, password_hash) = match session.get_account_id_password_hash(&username).await {
@@ -164,7 +167,6 @@ pub async fn signup(data: web::Json<Signup>, db: web::Data<DataBase>) -> HttpRes
     HttpResponse::Ok().finish()
 }
 
-// TODO:
 pub async fn delete_member(data: web::Json<MemberDelete>, db: web::Data<DataBase>) -> HttpResponse {
     let session = match db.get_session().await {
         Ok(session) => session,
@@ -217,6 +219,9 @@ pub async fn get_member(req: HttpRequest, db: web::Data<DataBase>) -> HttpRespon
 
     match session.get_member(claims.id()).await {
         Ok(member) => HttpResponse::Ok().json(Response::success(member)),
-        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
