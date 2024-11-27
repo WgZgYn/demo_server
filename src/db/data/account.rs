@@ -107,8 +107,6 @@ impl Session {
         user_info: UserInfoUpdate,
         account_id: i32,
     ) -> Result<u64, Box<dyn std::error::Error>> {
-        debug!("{:#?}", &user_info);
-
         // 获取旧数据，如果用户不存在，则添加新记录
         let old_info = match self.get_user_info(account_id).await {
             Ok(v) => v,
@@ -179,8 +177,7 @@ impl Session {
         Ok(())
     }
 
-    pub async fn update_area_info(&self, area_update: AreaUpdate) -> Result<u64, PoolError> {
-        // TODO:
-        Ok(0)
+    pub async fn update_area_info(&self, area_update: AreaUpdate, area_id: i32) -> Result<u64, Error> {
+        self.0.execute("UPDATE area SET area_name = $1 WHERE area_id = $2", &[&area_update.area_name, &area_id]).await
     }
 }
