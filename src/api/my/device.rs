@@ -82,6 +82,7 @@ pub mod root {
         use crate::utils::Response;
         use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
         use log::error;
+        use crate::utils;
 
         pub async fn get_device_info(
             req: HttpRequest,
@@ -110,13 +111,33 @@ pub mod root {
             data: web::Json<DeviceUpdate>,
             db: web::Data<DataBase>,
         ) -> HttpResponse {
-            // TODO:
-            HttpResponse::NotFound().finish()
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session.update_device_info(data.into_inner()).await {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+            }
         }
 
         pub async fn delete_device(data: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
-            // TODO:
-            HttpResponse::NotFound().finish()
+            let session = match db.get_session().await {
+                Ok(session) => session,
+                Err(e) => {
+                    error!("{}", e);
+                    return HttpResponse::InternalServerError().finish();
+                }
+            };
+
+            match session.delete_device(data.into_inner()).await {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+            }
         }
         pub mod status {
             use crate::db::Memory;
@@ -160,7 +181,6 @@ pub mod root {
                     Some(claims) => claims,
                     None => return HttpResponse::Unauthorized().finish(),
                 };
-                // TODO: judge
 
                 let (device_id, service_name) = service.into_inner();
                 println!("{device_id} {service_name}");
@@ -190,7 +210,7 @@ pub mod root {
                 let message = match *req.method() {
                     Method::POST => match content_type {
                         Some("application/json") => HostMessage::json(service_name, body),
-                        Some("text/plain") => HostMessage::text(service_name, body),
+                            Some("text/plain") => HostMessage::text(service_name, body),
                         _ => {
                             return HttpResponse::BadRequest()
                                 .json(utils::Result::error("unsupported content-type"));
