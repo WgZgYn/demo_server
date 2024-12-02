@@ -1,10 +1,11 @@
+use std::error::Error;
 use crate::data::sse::SseHandler;
 use crate::db::{CachedDataBase, Memory};
-use crate::dto::mqtt::{DeviceMessage, HostMessage};
+use crate::dto::mqtt::{DeviceMessage, HostToDeviceMessage};
 use crate::service::event::{Action, Trigger};
 use crate::utils::config::MqttConfig;
 use actix_web::web;
-use log::{error, info};
+use log::{debug, error, info};
 use rumqttc::{AsyncClient, ClientError, Event, EventLoop, Incoming, MqttOptions, QoS};
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -19,71 +20,26 @@ pub async fn handle_mqtt_message(
     loop {
         match event_loop.poll().await {
             Ok(Event::Incoming(Incoming::Publish(publish))) => {
-                println!("mqtt publish: {:?}", publish);
-                let msg: DeviceMessage = match serde_json::from_slice(&publish.payload) {
-                    Ok(msg) => msg,
+                info!("mqtt publish: {:?}", publish);
+                debug!("message: {:#?}", publish.payload);
+                let message: DeviceMessage = match serde_json::from_slice(&publish.payload) {
+                    Ok(message) => message,
                     Err(e) => {
-                        error!("mqtt message parse error: {:?}", e);
+                        error!("mqtt mqtt message parse error: {:?}", e);
                         continue;
                     }
                 };
-
-                let device_id: i32 = {
-                    let session = match db.get_session().await {
-                        Ok(session) => session,
-                        Err(e) => {
-                            error!("mqtt message db error: {:?}", e);
-                            continue;
-                        }
-                    };
-
-                    match session.get_device_id_by_mac(&msg.efuse_mac).await {
-                        Ok(device_id) => device_id,
-                        Err(e) => {
-                            error!("mqtt message device_id error: {:?}", e);
-                            continue;
-                        }
-                    }
-                };
-
-                match msg.type_.as_str() {
-                    "status" => {
-                        let mut guard = memory.device_state.write().await;
-                        guard.on_device_status(device_id, msg.payload);
-
-                        let guard = db.cache.device_id2account_ids.read().await;
-                        if let Some(v) = guard.get(&device_id) {
-                            for account_id in v {
-                                let mut sse = sse_handler.write().await;
-                                sse.send(*account_id, device_id.to_string().as_str()).await;
-                            }
-                        }
-                    }
-                    "event" => {
-                        let mut guard = memory.device_state.write().await;
-                        guard.on_device_event(device_id, msg.payload.clone());
-                        let guard = memory.scenes.read().await;
-                        let trigger = Trigger {
-                            efuse_mac: msg.efuse_mac,
-                            payload: msg.payload,
+                {
+                    let db = db.clone();
+                    let memory = memory.clone();
+                    let sse_handler = sse_handler.clone();
+                    let mqtt = mqtt.clone();
+                    tokio::spawn(async move {
+                        match handle_device_message(message, db, memory, sse_handler, mqtt).await {
+                            Ok(_) => { info!("mqtt message handled successfully"); },
+                            Err(e) => { error!("mqtt message handled error: {:?}", e); },
                         };
-
-                        for scene in guard.iter() {
-                            if let Some(actions) = scene.trigger(&trigger) {
-                                for action in actions {
-                                    if let Err(e) =
-                                        execute_action(action.clone(), db.clone(), mqtt.clone())
-                                            .await
-                                    {
-                                        error!("execute_action error: {:?}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    t => {
-                        info!("mqtt message type: {}", t);
-                    }
+                    });
                 }
             }
             Err(e) => {
@@ -94,10 +50,60 @@ pub async fn handle_mqtt_message(
     }
 }
 
-/// action:
-///     device_id: i32
-///     service_name: String
-///     body: String
+
+async fn handle_device_message(
+    msg: DeviceMessage,
+    db: web::Data<CachedDataBase>,
+    memory: web::Data<Memory>,
+    sse_handler: web::Data<RwLock<SseHandler>>,
+    mqtt: web::Data<AsyncClient>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    debug!("handle message: {:#?}", &msg);
+
+
+    let session = db.get_session().await?;
+    debug!("session ok");
+    let device_id: i32 = session.get_device_id_by_mac(&msg.efuse_mac).await?;
+    debug!("query ok");
+    info!("device_id: {}", device_id);
+
+
+    match msg.type_.as_str() {
+        "status" => {
+            let account_ids = session.get_account_ids_by_device_id(device_id).await?;
+            debug!("account_ids: {:?}", account_ids);
+            for account_id in account_ids {
+                debug!("account_id: {}", account_id);
+                let mut sse = sse_handler.write().await;
+                info!("send sse message");
+                sse.send(account_id, device_id.to_string().as_str()).await;
+            }
+        }
+
+        "event" => {
+            let trigger = Trigger {
+                efuse_mac: msg.efuse_mac.clone(),
+                payload: msg.payload.clone(),
+            };
+
+            let actions = memory.scenes.try_trigger(trigger).await;
+            for action in actions {
+                if let Err(e) = execute_action(action.clone(), db.clone(), mqtt.clone()).await {
+                    error!("execute_action error: {:?}", e);
+                }
+            }
+        }
+
+        t => {
+            info!("mqtt message type: {}", t);
+        }
+    }
+
+    memory.device_state.on_device_message(device_id, msg).await;
+
+    Ok(())
+}
+
 
 pub async fn execute_action(
     action: Action,
@@ -106,31 +112,25 @@ pub async fn execute_action(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let session = db.get_session().await?;
     let mac = session.get_device_mac_by_id(action.device_id).await?;
-    if action.body == "" {
-        send_host_message(mqtt, &mac, HostMessage::none(action.service_name)).await?;
-    } else {
-        send_host_message(
-            mqtt,
-            &mac,
-            HostMessage::text(action.service_name, action.body.into_bytes()),
-        )
-        .await?;
-    }
+
+    let message = HostToDeviceMessage::new(action.service_name, action.body);
+    send_host_message(mqtt, &mac, message).await?;
     Ok(())
 }
 
 pub async fn send_host_message(
     mqtt: web::Data<AsyncClient>,
     efuse_mac: &str,
-    message: HostMessage,
+    message: HostToDeviceMessage,
 ) -> Result<(), ClientError> {
+    debug!("Sending host message: {:#?}", message);
     mqtt.publish(
         format!("/device/{}/service", efuse_mac),
         QoS::ExactlyOnce,
         false,
         message,
     )
-    .await
+        .await
 }
 
 pub async fn mqtt(cfg: &MqttConfig) -> (AsyncClient, EventLoop) {
