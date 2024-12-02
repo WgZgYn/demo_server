@@ -1,7 +1,6 @@
 pub mod root {
     use crate::db::{DataBase, Memory};
     use crate::dto::entity::simple::{DeviceAdd, DeviceInfo};
-    use crate::dto::mqtt::HostMessage;
     use crate::security::auth::Claims;
     use crate::service::send_host_message;
     use crate::utils;
@@ -121,7 +120,10 @@ pub mod root {
 
             match session.update_device_info(data.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
 
@@ -136,7 +138,10 @@ pub mod root {
 
             match session.delete_device(data.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
         pub mod status {
@@ -148,8 +153,7 @@ pub mod root {
                 path: web::Path<i32>,
                 memory: web::Data<Memory>,
             ) -> HttpResponse {
-                let guard = memory.device_state.read().await;
-                match guard.status(path.into_inner()) {
+                match memory.device_state.status(path.into_inner()).await {
                     Some(v) => HttpResponse::Ok().json(Response::success(v)),
                     None => HttpResponse::NotFound().finish(),
                 }
@@ -158,7 +162,6 @@ pub mod root {
 
         pub mod service {
             use crate::db::DataBase;
-            use crate::dto::mqtt::HostMessage;
             use crate::security::auth::Claims;
             use crate::service::send_host_message;
             use crate::utils;
@@ -166,8 +169,9 @@ pub mod root {
             use actix_web::http::Method;
             use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
             use actix_web::web::Payload;
-            use log::error;
+            use log::{error, info};
             use rumqttc::AsyncClient;
+            use crate::dto::mqtt::HostToDeviceMessage;
 
             pub async fn execute_device_service(
                 req: HttpRequest,
@@ -183,7 +187,7 @@ pub mod root {
                 };
 
                 let (device_id, service_name) = service.into_inner();
-                println!("{device_id} {service_name}");
+                info!("{} {}", device_id, &service_name);
 
                 let session = match db.get_session().await {
                     Ok(session) => session,
@@ -197,31 +201,14 @@ pub mod root {
                     Ok(mac) => mac,
                     Err(e) => {
                         error!("{e}");
-                        return HttpResponse::NotFound()
-                            .json(utils::Result::error("no such device"));
+                        return HttpResponse::NotFound().json(utils::Result::error("no such device"));
                     }
                 };
 
-                let content_type = req
-                    .headers()
-                    .get(CONTENT_TYPE)
-                    .and_then(|ct| ct.to_str().ok());
                 let body = body.to_bytes().await.unwrap_or_default().to_vec();
-                let message = match *req.method() {
-                    Method::POST => match content_type {
-                        Some("application/json") => HostMessage::json(service_name, body),
-                            Some("text/plain") => HostMessage::text(service_name, body),
-                        _ => {
-                            return HttpResponse::BadRequest()
-                                .json(utils::Result::error("unsupported content-type"));
-                        }
-                    },
-                    Method::GET => HostMessage::none(service_name),
-                    _ => {
-                        return HttpResponse::BadRequest()
-                            .json(utils::Result::error("unsupported method"))
-                    }
-                };
+                let value = serde_json::from_slice(&body).ok();
+                let message = HostToDeviceMessage::new(service_name, value);
+
                 match send_host_message(mqtt, &mac, message).await {
                     Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                     Err(e) => {
