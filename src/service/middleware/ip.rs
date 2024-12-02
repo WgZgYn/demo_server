@@ -32,7 +32,7 @@ where
         ready(Ok(RecordIPMiddleware {
             service,
             whitelist: self.whitelist.clone(),
-            blacklist: self.blacklist.clone(),
+            _blacklist: self.blacklist.clone(),
             record: self.record.clone(),
         }))
     }
@@ -41,7 +41,7 @@ where
 pub struct RecordIPMiddleware<S> {
     service: S,
     whitelist: Arc<RwLock<HashSet<IpAddr>>>,
-    blacklist: Arc<RwLock<HashSet<IpAddr>>>,
+    _blacklist: Arc<RwLock<HashSet<IpAddr>>>,
     record: Arc<RwLock<HashSet<IpAddr>>>,
 }
 

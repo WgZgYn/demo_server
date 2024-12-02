@@ -1,4 +1,4 @@
-use crate::api::my::{config_my, login, signup};
+use crate::api::my::{config_my};
 use crate::api::sse::sse_account;
 use crate::api::test::config_test;
 use crate::db::DataBase;
@@ -8,10 +8,12 @@ use crate::utils;
 use crate::utils::Response;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use log::error;
+use crate::api::account::{login, signup};
 
 pub mod my;
 mod sse;
 pub mod test;
+mod account;
 
 pub async fn login_token() -> HttpResponse {
     HttpResponse::Ok().json(utils::Result::success())

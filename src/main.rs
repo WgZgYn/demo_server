@@ -53,6 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(client.clone())
             .app_data(database.clone())
             .app_data(memory.clone())
+            .app_data(sse_session.clone())
             .configure(config_api)
         // .configure(config_web)
         // .configure(config_redirects)
