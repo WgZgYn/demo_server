@@ -71,16 +71,37 @@ impl CacheSession {
     }
 
     pub async fn get_device_id_by_mac(&self, device_mac: &str) -> Result<i32, PoolError> {
-        let guard = self.cache.device_mac2id.read().await;
-        if let Some(v) = guard.get(device_mac) {
-            return Ok(*v);
-        }
+        {
+            let guard = self.cache.device_mac2id.read().await;
+            if let Some(v) = guard.get(device_mac) {
+                return Ok(*v);
+            }
+        }// necessary to drop the guard
         let device_id = self.session.get_device_id_by_mac(device_mac).await?;
-        let mut guard = self.cache.device_mac2id.write().await;
-        guard.insert(device_mac.to_string(), device_id);
-        let mut guard = self.cache.device_id2mac.write().await;
-        guard.insert(device_id, device_mac.to_string());
+        {
+            let mut guard = self.cache.device_mac2id.write().await;
+            guard.insert(device_mac.to_string(), device_id);
+        }
+        {
+            let mut guard = self.cache.device_id2mac.write().await;
+            guard.insert(device_id, device_mac.to_string());
+        }
         Ok(device_id)
+    }
+
+    pub async fn get_account_ids_by_device_id(&self, device_id: i32) -> Result<HashSet<i32>, PoolError> {
+        {
+            let guard = self.cache.device_id2account_ids.read().await;
+            if let Some(v) = guard.get(&device_id) {
+                return Ok(v.clone());
+            }
+        }
+        let data = self.session.get_account_ids_by_device_id(device_id).await?;
+        {
+            let mut guard = self.cache.device_id2account_ids.write().await;
+            guard.insert(device_id, data.clone());
+            Ok(data)
+        }
     }
 }
 
