@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, UserInfo};
 use crate::dto::http::request::{AreaUpdate, UserInfoUpdate};
@@ -179,5 +180,10 @@ impl Session {
 
     pub async fn update_area_info(&self, area_update: AreaUpdate, area_id: i32) -> Result<u64, Error> {
         self.0.execute("UPDATE area SET area_name = $1 WHERE area_id = $2", &[&area_update.area_name, &area_id]).await
+    }
+
+    pub async fn get_account_ids_by_device_id(&self, device_id: i32) -> Result<HashSet<i32>, PoolError> {
+        let rows = self.0.query("SELECT account_id FROM account_devices_view WHERE device_id = $1", &[&device_id]).await?;
+        Ok(rows.into_iter().map(|row| row.get(0)).collect())
     }
 }
