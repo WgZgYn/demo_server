@@ -29,5 +29,5 @@ pub struct Trigger {
 pub struct Action {
     pub device_id: i32,
     pub service_name: String,
-    pub body: String,
+    pub body: Option<serde_json::Value>,
 }
