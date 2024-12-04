@@ -1,8 +1,9 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use log::{error, info};
 use crate::db::DataBase;
-use crate::dto::http::request::{Login, Signup};
+use crate::dto::http::request::{AccountUpdate, Login, Signup, UserInfoUpdate};
 use crate::dto::http::response::LoginSuccess;
+use crate::security::auth::Claims;
 use crate::security::hash;
 use crate::security::hash::{gen_salt, password_hash};
 use crate::utils;
@@ -62,4 +63,94 @@ pub async fn signup(data: web::Json<Signup>, db: web::Data<DataBase>) -> HttpRes
     }
 
     HttpResponse::Ok().finish()
+}
+
+
+pub async fn delete_account(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    let mut session = match db.get_session().await {
+        Ok(session) => session,
+        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+    };
+
+    match session.delete_account(claims.id()).await {
+        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+    }
+}
+
+pub async fn update_account(req: HttpRequest, account: web::Json<AccountUpdate>, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    let mut session = match db.get_session().await {
+        Ok(session) => session,
+        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+    };
+
+    match session.update_account(account.into_inner(), claims.id()).await {
+        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+    }
+}
+
+
+pub async fn get_user_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+    match db.get_session().await {
+        Ok(session) => match session.get_user_info(claims.id()).await {
+            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+            Err(e) => {
+                error!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn update_user_info(
+    req: HttpRequest,
+    data: web::Json<UserInfoUpdate>,
+    db: web::Data<DataBase>,
+) -> HttpResponse {
+    let e = req.extensions();
+    let claims = match e.get::<Claims>() {
+        Some(claims) => claims,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    match db.get_session().await {
+        Ok(session) => {
+            match session
+                .update_user_info(data.into_inner(), claims.id())
+                .await
+            {
+                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
