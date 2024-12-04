@@ -107,6 +107,7 @@ pub mod root {
         }
 
         pub async fn update_device_info(
+            id: web::Path<i32>,
             data: web::Json<DeviceUpdate>,
             db: web::Data<DataBase>,
         ) -> HttpResponse {
@@ -118,7 +119,7 @@ pub mod root {
                 }
             };
 
-            match session.update_device_info(data.into_inner()).await {
+            match session.update_device_info(id.into_inner(), data.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                 Err(e) => {
                     error!("{}", e);

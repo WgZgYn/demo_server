@@ -243,19 +243,22 @@ impl Session {
         }
     }
 
-    pub async fn update_device_info(&self, info: DeviceUpdate) -> Result<u64, Error> {
+    pub async fn update_device_info(&self, id: i32, info: DeviceUpdate) -> Result<u64, Error> {
         let mut p = "UPDATE device SET ".to_string();
         let mut a = Vec::<&(dyn tokio_postgres::types::ToSql + Sync)>::new();
 
         if let Some(ref name) = info.device_name {
             a.push(name);
-            p += &format!("device_name = ${}", a.len());
+            p += &format!("device_name = ${} ", a.len());
         }
 
         if let Some(ref id) = info.area_id {
             a.push(id);
-            p += &format!("area_id = ${}", a.len());
+            p += &format!("area_id = ${} ", a.len());
         }
+
+        a.push(&id);
+        p += &format!("WHERE device_id = ${} ", a.len());
 
         self.0.execute(&p, &a).await
     }
