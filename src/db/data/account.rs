@@ -1,11 +1,13 @@
 use std::collections::HashSet;
+use actix_web::web;
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, UserInfo};
-use crate::dto::http::request::{AreaUpdate, UserInfoUpdate};
+use crate::dto::http::request::{AccountUpdate, AreaUpdate, UserInfoUpdate};
 use crate::security::auth::{create_token, Role};
 use deadpool_postgres::{GenericClient, PoolError};
 use log::debug;
 use tokio_postgres::Error;
+use crate::security::hash::{gen_salt, password_hash, password_verify};
 
 impl Session {
     pub async fn get_user_info(&self, account_id: i32) -> Result<UserInfo, PoolError> {
@@ -101,6 +103,44 @@ impl Session {
                 &[&account_id, &gender, &city, &age, &email],
             )
             .await
+    }
+
+    pub async fn update_account(
+        &self,
+        update: AccountUpdate,
+        account_id: i32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let row = self.0.query_one("SELECT password_hash FROM account WHERE account_id = $1", &[&account_id]).await?;
+        let password: String = row.get("password_hash");
+        let AccountUpdate { account_name, old_password, new_password } = update;
+        if !password_verify(&password, old_password.as_bytes()) {
+            return Err("Invalid password".into());
+        }
+
+        let mut query = "UPDATE account SET ".to_string();
+        let mut params = Vec::<&(dyn tokio_postgres::types::ToSql + Sync)>::new();
+
+        if let Some(new_username) = account_name {
+            params.push(&new_username);
+            query.push_str(&format!(" username = ${} ", params.len()));
+        }
+
+        if let Some(new_password) = new_password {
+            let salt = gen_salt();
+            let hash = password_hash(&new_password, &salt);
+
+            params.push(&hash);
+            query.push_str(&format!(" , password_hash = ${} ", params.len()));
+
+            params.push(&hex::encode(salt));
+            query.push_str(&format!(" , salt = ${} ", params.len()));
+        }
+
+        params.push(&account_id);
+        query.push_str(&format!(" WHERE account_id = ${}", params.len()));
+
+        self.0.execute(&query, &params).await?;
+        Ok(())
     }
 
     pub async fn update_user_info(
