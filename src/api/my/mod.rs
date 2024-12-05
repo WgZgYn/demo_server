@@ -18,7 +18,7 @@ use crate::api::sse::sse_account;
 use crate::api::{get_user_info, update_user_info};
 use crate::security::auth::Auth;
 use actix_web::web::ServiceConfig;
-use actix_web::{web, HttpMessage, Responder};
+use actix_web::{web, Responder};
 
 pub fn config_my(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -29,7 +29,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     .service(
                         web::resource("")
                             .route(web::get().to(get_all_devices))
-                            .route(web::post().to(add_device)), // TODO: Use/Test this api
+                            .route(web::post().to(add_device)), // TODO: Use/Test this api, phone will use this api
                     )
                     .service(
                         web::scope("/{id}")
@@ -54,12 +54,13 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             .route(web::post().to(add_house)),
                     )
                     .service(
-                        web::scope("/{id}").service(
-                            web::resource("")
-                                .route(web::get().to(get_house_info))
-                                .route(web::patch().to(update_house_info))
-                                .route(web::delete().to(delete_house))
-                        ),
+                        web::scope("/{id}")
+                            .service(
+                                web::resource("")
+                                    .route(web::get().to(get_house_info))
+                                    .route(web::patch().to(update_house_info))
+                                    .route(web::delete().to(delete_house))
+                            )
                     ),
             )
             .service(
