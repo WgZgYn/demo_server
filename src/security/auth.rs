@@ -1,5 +1,5 @@
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
-use actix_web::{Error, HttpMessage, HttpResponse};
+use actix_web::{Error, HttpMessage, HttpRequest, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use actix_web_httpauth::extractors::{bearer, AuthenticationError};
 use chrono::{Duration, Utc};
@@ -14,6 +14,7 @@ pub enum Role {
     Admin,
     User,
 }
+
 impl Role {
     pub fn as_str(&self) -> &str {
         match self {
@@ -22,7 +23,6 @@ impl Role {
         }
     }
 }
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     id: i32,
@@ -49,7 +49,7 @@ pub fn create_token(user: String, role: Role, id: i32) -> String {
     let claims = Claims {
         id,
         sub: user,
-        role: role.as_str().to_owned(),
+        role: role.as_str().to_string(),
         exp: jwt_exp.timestamp() as usize, // 设置过期时间
     };
     let token = encode(
@@ -58,7 +58,7 @@ pub fn create_token(user: String, role: Role, id: i32) -> String {
         // This can be lazy init
         &EncodingKey::from_secret(SECRET_KEY),
     )
-    .unwrap();
+        .unwrap();
     token
 }
 
@@ -90,7 +90,7 @@ pub struct Auth;
 
 impl<S, B> Transform<S, ServiceRequest> for Auth
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -111,7 +111,7 @@ pub struct AuthMiddleware<S> {
 
 impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -138,7 +138,7 @@ where
         if let Some(token) = token {
             if let Ok(token_data) = validate_token(token) {
                 req.extensions_mut().insert(token_data.claims); // 将 Claims 存储到 req 中
-                                                                // 如果 JWT 验证通过，继续处理请求
+                // 如果 JWT 验证通过，继续处理请求
                 let fut = self.service.call(req);
                 return Box::pin(async move {
                     let res = fut.await?;
@@ -153,4 +153,10 @@ where
             )
         })
     }
+}
+
+
+pub fn get_id_from_http_request(req: &HttpRequest) -> Option<i32> {
+    let e = req.extensions();
+    e.get::<Claims>().map(|claims| claims.id)
 }
