@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use actix_web::web;
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, UserInfo};
 use crate::dto::http::request::{AccountUpdate, AreaUpdate, UserInfoUpdate};
@@ -120,19 +119,24 @@ impl Session {
         let mut query = "UPDATE account SET ".to_string();
         let mut params = Vec::<&(dyn tokio_postgres::types::ToSql + Sync)>::new();
 
-        if let Some(new_username) = account_name {
-            params.push(&new_username);
+        if let Some(new_username) = account_name.as_ref() {
+            params.push(new_username);
             query.push_str(&format!(" username = ${} ", params.len()));
         }
 
-        if let Some(new_password) = new_password {
-            let salt = gen_salt();
-            let hash = password_hash(&new_password, &salt);
+        let salt;
+        let hash;
+        let hstr;
+
+        if let Some(new_password) = new_password.as_ref() {
+            salt = gen_salt();
+            hash = password_hash(&new_password, &salt);
 
             params.push(&hash);
             query.push_str(&format!(" , password_hash = ${} ", params.len()));
+            hstr = hex::encode(salt);
 
-            params.push(&hex::encode(salt));
+            params.push(&hstr);
             query.push_str(&format!(" , salt = ${} ", params.len()));
         }
 

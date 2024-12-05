@@ -91,7 +91,7 @@ pub async fn update_account(req: HttpRequest, account: web::Json<AccountUpdate>,
         None => return HttpResponse::Unauthorized().finish(),
     };
 
-    let mut session = match db.get_session().await {
+    let session = match db.get_session().await {
         Ok(session) => session,
         Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
     };
