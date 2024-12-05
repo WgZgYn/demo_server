@@ -1,14 +1,10 @@
-use crate::api::my::{config_my};
+use crate::api::account::{delete_account, get_user_info, login, signup, update_account, update_user_info};
+use crate::api::my::config_my;
 use crate::api::sse::sse_account;
 use crate::api::test::config_test;
-use crate::db::DataBase;
-use crate::dto::http::request::UserInfoUpdate;
-use crate::security::auth::{Auth, Claims};
+use crate::security::auth::Auth;
 use crate::utils;
-use crate::utils::Response;
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use log::error;
-use crate::api::account::{login, signup};
+use actix_web::{web, HttpMessage, HttpResponse};
 
 pub mod my;
 mod sse;
@@ -32,13 +28,15 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
             .service(
                 web::resource("/account")
                     .wrap(Auth)
+                    .route(web::patch().to(update_account))
                     .route(web::delete().to(delete_account))
             )
             .service(
                 web::resource("/userinfo")
                     .wrap(Auth)
                     .route(web::get().to(get_user_info))
-                    .route(web::post().to(update_user_info)),
+                    .route(web::post().to(update_user_info))
+                    .route(web::patch().to(update_user_info)),
             )
             .service(
                 web::scope("/sse")
@@ -48,75 +46,4 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
             .configure(config_my)
             .configure(config_test),
     );
-}
-
-pub async fn get_user_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
-        None => return HttpResponse::Unauthorized().finish(),
-    };
-    match db.get_session().await {
-        Ok(session) => match session.get_user_info(claims.id()).await {
-            Ok(v) => HttpResponse::Ok().json(Response::success(v)),
-            Err(e) => {
-                error!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            }
-        },
-        Err(e) => {
-            error!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
-}
-
-pub async fn update_user_info(
-    req: HttpRequest,
-    data: web::Json<UserInfoUpdate>,
-    db: web::Data<DataBase>,
-) -> HttpResponse {
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
-        None => return HttpResponse::Unauthorized().finish(),
-    };
-
-    match db.get_session().await {
-        Ok(session) => {
-            match session
-                .update_user_info(data.into_inner(), claims.id())
-                .await
-            {
-                Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                Err(e) => {
-                    error!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                }
-            }
-        }
-        Err(e) => {
-            error!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
-}
-
-
-async fn delete_account(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
-        None => return HttpResponse::Unauthorized().finish(),
-    };
-
-    let mut session = match db.get_session().await {
-        Ok(session) => session,
-        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
-    };
-
-    match session.delete_account(claims.id()).await {
-        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
-    }
 }
