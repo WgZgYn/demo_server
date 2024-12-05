@@ -57,7 +57,7 @@ async fn handle_device_message(
     memory: web::Data<Memory>,
     sse_handler: web::Data<RwLock<SseHandler>>,
     mqtt: web::Data<AsyncClient>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn Error>> {
     debug!("handle message: {:#?}", &msg);
 
 
@@ -67,6 +67,7 @@ async fn handle_device_message(
     debug!("query ok");
     info!("device_id: {}", device_id);
 
+    memory.device_state.on_device_message(device_id, msg.clone()).await;
 
     match msg.type_.as_str() {
         "status" => {
@@ -98,9 +99,6 @@ async fn handle_device_message(
             info!("mqtt message type: {}", t);
         }
     }
-
-    memory.device_state.on_device_message(device_id, msg).await;
-
     Ok(())
 }
 

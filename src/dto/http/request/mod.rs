@@ -1,12 +1,10 @@
 use crate::service::event::{Action, Trigger};
 use serde::Deserialize;
 use std::collections::HashSet;
-
 #[derive(Deserialize)]
-pub struct AccountUpdate {}
-
-#[derive(Deserialize)]
-pub struct HouseUpdate {}
+pub struct HouseUpdate {
+    pub house_name: String
+}
 
 #[derive(Deserialize)]
 pub struct AreaUpdate {
@@ -20,10 +18,11 @@ pub struct DeviceUpdate {
 }
 
 #[derive(Deserialize)]
-pub struct AccountLogin {}
-
-#[derive(Deserialize)]
-pub struct AccountSignup {}
+pub struct AccountUpdate {
+    pub account_name: Option<String>,
+    pub old_password: String,
+    pub new_password: Option<String>,
+}
 
 #[derive(Deserialize)]
 pub struct SceneAdd {
