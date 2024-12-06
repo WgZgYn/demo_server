@@ -21,7 +21,7 @@ pub struct AreaInfo {
 
 #[derive(Deserialize)]
 pub struct DeviceAdd {
-    pub device_mac: String,
+    pub efuse_mac: String,
     pub device_name: String,
     pub model_id: i32,
     pub area_id: i32,
