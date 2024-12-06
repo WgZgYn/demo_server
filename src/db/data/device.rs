@@ -20,7 +20,7 @@ impl Session {
         account_id: i32,
         model_id: i32,
     ) -> Result<u64, Error> {
-        self.0.execute("INSERT INTO device (device_name, efuse_mac, area_id, created_by, model_id) VALUES ($1, $2, $3, $4, $5, $6)",
+        self.0.execute("INSERT INTO device (device_name, efuse_mac, area_id, created_by, model_id) VALUES ($1, $2, $3, $4, $5)",
                        &[&device_name, &efuse_mac, &area_id, &account_id, &model_id]).await
     }
 
