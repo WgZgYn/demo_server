@@ -57,13 +57,13 @@ pub mod root {
         };
 
         let DeviceAdd {
-            device_mac,
+            efuse_mac,
             device_name,
             area_id,
             model_id,
         } = data.into_inner();
         match session
-            .add_device(&device_name, &device_mac, area_id, claims.id(), model_id)
+            .add_device(&device_name, &efuse_mac, area_id, claims.id(), model_id)
             .await
         {
             Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
@@ -149,11 +149,13 @@ pub mod root {
             use crate::db::Memory;
             use crate::utils::Response;
             use actix_web::{web, HttpResponse};
+            use log::info;
 
             pub async fn get_device_status(
                 path: web::Path<i32>,
                 memory: web::Data<Memory>,
             ) -> HttpResponse {
+                info!("get_device_status {}", path.clone());
                 match memory.device_state.status(path.into_inner()).await {
                     Some(v) => HttpResponse::Ok().json(Response::success(v)),
                     None => HttpResponse::NotFound().finish(),
