@@ -14,7 +14,7 @@ use tokio::sync::{Mutex, RwLock};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    env_logger::Builder::new().parse_filters("debug,rumqttc::state=off").init();
 
     debug!("starting server");
 
