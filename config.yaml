@@ -5,7 +5,7 @@ database:
 mqtt:
   host: "47.108.27.238"
   port: 1883
-  id: rust
+  id: rust-server
   cap: 10
   keep_alive: 5
   topic_status: "/status"
