@@ -44,7 +44,7 @@ impl Session {
             .await?;
         let house_id: i32 = row.get("house_id");
         trans
-            .query_one(
+            .execute(
                 "INSERT INTO member (house_id, account_id) VALUES ($1, $2) ",
                 &[&house_id, &account_id],
             )
