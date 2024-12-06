@@ -66,7 +66,7 @@ pub mod root {
             .add_device(&device_name, &efuse_mac, area_id, claims.id(), model_id)
             .await
         {
-            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Ok(id) => HttpResponse::Ok().json(Response::success(id)),
             Err(e) => {
                 error!("{}", e);
                 HttpResponse::InternalServerError().finish()
