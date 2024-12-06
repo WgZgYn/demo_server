@@ -34,7 +34,7 @@ impl Session {
             .execute("DELETE FROM house WHERE house_id = $1", &[&house_id])
             .await
     }
-    pub async fn add_house(&mut self, house_name: &str, account_id: i32) -> Result<(), Error> {
+    pub async fn add_house(&mut self, house_name: &str, account_id: i32) -> Result<i32, Error> {
         let trans = self.0.transaction().await?;
         let row = trans
             .query_one(
@@ -44,13 +44,13 @@ impl Session {
             .await?;
         let house_id: i32 = row.get("house_id");
         trans
-            .execute(
-                "INSERT INTO member (house_id, account_id) VALUES ($1, $2)",
+            .query_one(
+                "INSERT INTO member (house_id, account_id) VALUES ($1, $2) ",
                 &[&house_id, &account_id],
             )
             .await?;
         trans.commit().await?;
-        Ok(())
+        Ok(house_id)
     }
 
     pub async fn get_all_house_info(&self, account_id: i32) -> Result<Vec<HouseInfo>, PoolError> {

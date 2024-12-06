@@ -28,6 +28,7 @@ pub mod root {
         }
     }
 
+    // TODO: test
     pub async fn add_house(
         data: web::Json<HouseAdd>,
         req: HttpRequest,
@@ -49,7 +50,7 @@ pub mod root {
         };
 
         match session.add_house(&data.house_name, account_id).await {
-            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Ok(id) => HttpResponse::Ok().json(Response::success(id)),
             Err(e) => {
                 error!("{}", e);
                 HttpResponse::InternalServerError().finish()

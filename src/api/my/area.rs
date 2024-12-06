@@ -53,7 +53,7 @@ pub mod root {
             .add_area(&data.area_name, data.house_id, account_id)
             .await
         {
-            Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+            Ok(id) => HttpResponse::Ok().json(Response::success(id)),
             Err(e) => {
                 error!("{}", e);
                 HttpResponse::InternalServerError().finish()
@@ -105,7 +105,10 @@ pub mod root {
 
             match session.update_area_info(data.into_inner(), id.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
         pub async fn delete_area(id: web::Path<i32>, db: web::Data<DataBase>, req: HttpRequest) -> HttpResponse {
@@ -119,7 +122,10 @@ pub mod root {
 
             match session.delete_area(id.into_inner()).await {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+                Err(e) => {
+                    error!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
     }

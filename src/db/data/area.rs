@@ -48,13 +48,15 @@ impl Session {
         area_name: &str,
         house_id: i32,
         account_id: i32,
-    ) -> Result<u64, Error> {
-        self.0
-            .execute(
-                "INSERT INTO area (house_id, created_by, area_name) VALUES ($1, $2, $3)",
+    ) -> Result<i32, Error> {
+        let row = self.0
+            .query_one(
+                "INSERT INTO area (house_id, created_by, area_name) VALUES ($1, $2, $3) RETURNING area_id",
                 &[&house_id, &account_id, &area_name],
             )
-            .await
+            .await?;
+        let area_id: i32 = row.get("area_id");
+        Ok(area_id)
     }
 
     pub async fn get_area_info(
