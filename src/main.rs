@@ -9,15 +9,13 @@ use demo_server::security::{config_ssl, RecordIP};
 use demo_server::service::middleware::Timer;
 use demo_server::service::{handle_mqtt_message, mqtt};
 use demo_server::utils::config::read_config;
-use log::debug;
+use log::{debug, LevelFilter};
 use tokio::sync::{Mutex, RwLock};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // env_logger::Builder::new()
-    //     .filter_module("rumqttc", LevelFilter::Off)
-    //     .init();
     env_logger::init();
+
     debug!("starting server");
 
     let cfg = read_config()?;
@@ -58,13 +56,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // .configure(config_web)
         // .configure(config_redirects)
     })
-    .bind(format!(
-        "{ip}:{port}",
-        ip = &cfg.actix.ip,
-        port = &cfg.actix.port
-    ))?
-    .bind_openssl(format!("{}:443", &cfg.actix.ip), ssl)?
-    .run()
-    .await?;
+        .bind(format!(
+            "{ip}:{port}",
+            ip = &cfg.actix.ip,
+            port = &cfg.actix.port
+        ))?
+        .bind_openssl(format!("{}:443", &cfg.actix.ip), ssl)?
+        .run()
+        .await?;
     Ok(())
 }
