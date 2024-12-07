@@ -122,7 +122,7 @@ impl Session {
 
         if let Some(new_username) = account_name.as_ref() {
             params.push(new_username);
-            query.push_str(&format!(" username = ${} ", params.len()));
+            query.push_str(&format!("username = ${} ", params.len()));
             head = false;
         }
 
@@ -135,11 +135,13 @@ impl Session {
             hash = password_hash(&new_password, &salt);
 
             params.push(&hash);
-            query.push_str(&format!(" {} password_hash = ${} ", if head { "" } else { "," }, params.len()));
+            query.push_str(&format!("{} password_hash = ${}", if head { "" } else { "," }, params.len()));
             hstr = hex::encode(salt);
 
+            head = false;
+
             params.push(&hstr);
-            query.push_str(&format!(" {} salt = ${} ", if head { "" } else { "," }, params.len()));
+            query.push_str(&format!("{} salt = ${}", if head { "" } else { "," }, params.len()));
         }
 
         params.push(&account_id);
