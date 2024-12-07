@@ -1,24 +1,40 @@
-### GET request to example server
-GET localhost:80/api/test/mqtt
-###
-POST localhost:80/api/login
+### test account signup
+POST 47.108.27.238/api/signup
 Content-Type: application/json
 
 {
-  "username": "wzy",
+  "username": "test",
   "password": "123456"
 }
 
-> {% client.global.set("local-rust-token", response.body.data.token); %}
-###
-GET localhost:80/api/my/device
-Authorization: Bearer {{local-rust-token}}
-###
-GET localhost:80/api/my/device/4/open
-Authorization: Bearer {{local-rust-token}}
-###
+### test account login -- test
+POST 47.108.27.238/api/login
+Content-Type: application/json
 
-###
+{
+  "username": "test",
+  "password": "123456"
+}
+
+> {% client.global.set("temp-token", response.body.data.token); %}
+
+### test account update
+PATCH 47.108.27.238/api/account
+Authorization: Bearer {{temp-token}}
+Content-Type: application/json
+
+{
+  "old_password": "123456",
+  "new_password": "old password is must, new_password and account_name is optional",
+  "account_name": "newTestAccountName"
+}
+
+### test account delete -- be carefull, it will delete all the data related to the account, house, area, device, member
+DELETE 47.108.27.238/api/account
+Authorization: Bearer {{temp-token}}
+
+
+### test account login -- real, don't delete the account or the database almost gone
 POST 47.108.27.238/api/login
 Content-Type: application/json
 
@@ -29,68 +45,132 @@ Content-Type: application/json
 
 > {% client.global.set("remote-rust-token", response.body.data.token); %}
 
-###
-GET 47.108.27.238/api/test/mqtt
-###
-GET 47.108.27.238/api/my/device
+### test token
+GET 47.108.27.238/api/auth
 Authorization: Bearer {{remote-rust-token}}
-###
-GET 47.108.27.238/api/my/device/4/service/switch
-Authorization: Bearer {{remote-rust-token}}
-###
-GET 47.108.27.238/api/sse
-Authorization: Bearer {{remote-rust-token}}
-###
+
+### test userinfo fetch
 GET 47.108.27.238/api/userinfo
 Authorization: Bearer {{remote-rust-token}}
-###
-GET 47.108.27.238/api/my/device/4/status
+
+### test userinfo update
+PATCH 47.108.27.238/api/userinfo
+Authorization: Bearer {{remote-rust-token}}
+Content-Type: application/json
+
+{
+  "age": 18,
+  "email": "abc@qq.com"
+}
+
+### test device fetch
+GET 47.108.27.238/api/my/device
+Authorization: Bearer {{remote-rust-token}}
+
+### test house fetch
+GET 47.108.27.238/api/my/house
+Authorization: Bearer {{remote-rust-token}}
+
+### test area fetch
+GET 47.108.27.238/api/my/area
+Authorization: Bearer {{remote-rust-token}}
+
+### test member fetch
+GET 47.108.27.238/api/my/member
+Authorization: Bearer {{remote-rust-token}}
+
+### test sse
+GET 47.108.27.238/api/sse
+Authorization: Bearer {{remote-rust-token}}
+
+### test house add
+POST 47.108.27.238/api/my/house
+Authorization: Bearer {{remote-rust-token}}
+Content-Type: application/json
+
+{
+  "house_name": "TestHouseAdd"
+}
+
+> {% client.global.set("temp-new-houseId", response.body.data); %}
+### test house update
+PATCH 47.108.27.238/api/my/house/{{temp-new-houseId}}
+Authorization: Bearer {{remote-rust-token}}
+Content-Type: application/json
+
+{
+  "house_name": "TestHouseUpdate"
+}
+
+### test house info fetch
+GET 47.108.27.238/api/my/house/1
+Authorization: Bearer {{remote-rust-token}}
+
+### test area add
+POST 47.108.27.238/api/my/area
+Authorization: Bearer {{remote-rust-token}}
+Content-Type: application/json
+
+{
+  "area_name": "TestAreaAdd",
+  "house_id": 3
+}
+
+> {% client.global.set("temp-new-areaId", response.body.data); %}
+
+### test area update
+PATCH 47.108.27.238/api/my/area/{{temp-new-areaId}}
+Authorization: Bearer {{remote-rust-token}}
+Content-Type: application/json
+
+{
+  "area_name": "TestAreaUpdate"
+}
+
+### test area info fetch
+GET 47.108.27.238/api/my/area/1
 Authorization: Bearer {{remote-rust-token}}
 
 
-###
-POST localhost:8123/api/login
+### test device add
+POST 47.108.27.238/api/my/device
+Authorization: Bearer {{remote-rust-token}}
 Content-Type: application/json
 
 {
-  "username": "wzy",
-  "password": "123456"
+  "efuse_mac": "123456",
+  "device_name": "TestDeviceAdd",
+  "model_id": 2,
+  "area_id": {{temp-new-areaId}}
 }
 
-> {% client.global.set("token", response.body.data.token); %}
+> {% client.global.set("temp-new-deviceId", response.body.data); %}
 
-###
-GET localhost:8123/api/my/device
-Authorization: Bearer {{token}}
-###
-GET localhost:8123/api/my/house
-Authorization: Bearer {{token}}
-###
-GET localhost:8123/api/my/area
-Authorization: Bearer {{token}}
-###
-GET localhost:8123/api/my/device/4
-Authorization: Bearer {{token}}
-###
-GET localhost:8123/api/userinfo
-Authorization: Bearer {{token}}
-###
-POST localhost:8123/api/userinfo
-Authorization: Bearer {{token}}
+### test device update
+PATCH 47.108.27.238/api/my/device/{{temp-new-deviceId}}
+Authorization: Bearer {{remote-rust-token}}
 Content-Type: application/json
 
 {
-  "age": 19
+  "device_name": "newTestDeviceName"
 }
-###
-GET localhost:8123/api/my/device/4/service/open
-Authorization: Bearer {{token}}
-###
-GET localhost:8123/api/my/device/4/service/close
-Authorization: Bearer {{token}}
-###
-POST localhost:8123/api/my/device/4/service/light
-Authorization: Bearer {{token}}
-Content-Type: text/plain
 
-100
+### test device status -- if the device is offline, it will be 404, but it's normal and will be fixed later
+GET 47.108.27.238/api/my/device/21/status
+Authorization: Bearer {{remote-rust-token}}
+
+### test device service
+GET 47.108.27.238/api/my/device/4/service/switch
+Authorization: Bearer {{remote-rust-token}}
+
+### test device delete
+DELETE 47.108.27.238/api/my/device/{{temp-new-deviceId}}
+Authorization: Bearer {{remote-rust-token}}
+
+### test area delete
+DELETE 47.108.27.238/api/my/area/{{temp-new-areaId}}
+Authorization: Bearer {{remote-rust-token}}
+
+### test house delete
+DELETE 47.108.27.238/api/my/house/{{temp-new-houseId}}
+Authorization: Bearer {{remote-rust-token}}
