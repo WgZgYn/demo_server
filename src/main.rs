@@ -9,7 +9,7 @@ use demo_server::security::{config_ssl, RecordIP};
 use demo_server::service::middleware::Timer;
 use demo_server::service::{handle_mqtt_message, mqtt};
 use demo_server::utils::config::read_config;
-use log::{debug, LevelFilter};
+use log::debug;
 use tokio::sync::{Mutex, RwLock};
 
 #[actix_web::main]
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = create_connection_pool(&cfg.database).await?;
     let database = web::Data::new(DataBase::from(pool.clone()));
     let cached = web::Data::new(CachedDataBase::from(pool));
-    let memory = web::Data::new(Memory::default());
+    let memory = web::Data::new(Memory::new(cached.clone()));
 
     // 内存共享数据
     let counter = web::Data::new(Mutex::new(0));
@@ -34,11 +34,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let sse1 = sse_session.clone();
     let memory1 = memory.clone();
-    let database1 = cached;
     let client1 = client.clone();
 
     tokio::spawn(async move {
-        handle_mqtt_message(event_loop, sse1, memory1, database1, client1).await;
+        handle_mqtt_message(event_loop, sse1, memory1, client1).await;
     });
 
     HttpServer::new(move || {

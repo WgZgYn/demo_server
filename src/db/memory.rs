@@ -1,9 +1,13 @@
 use crate::service::event::{Action, Scene, Trigger};
-use log::error;
+use log::{debug, error, info};
 use rumqttc::{AsyncClient, ClientError, QoS};
 use std::collections::{HashMap, VecDeque};
+use actix_web::web;
 use tokio::sync::RwLock;
+use crate::data::sse::SseHandler;
+use crate::db::{CachedDataBase, DataBase};
 use crate::dto::mqtt::{DeviceMessage, HostToDeviceMessage};
+use crate::service::execute_action;
 
 #[derive(Debug, Default)]
 pub struct DeviceState {
@@ -18,10 +22,72 @@ pub struct SceneManager {
     scenes: RwLock<Vec<Scene>>,
 }
 
-#[derive(Default)]
 pub struct Memory {
     pub device_state: DeviceState,
     pub scenes: SceneManager,
+    pub db: web::Data<CachedDataBase>,
+}
+
+impl Memory {
+    pub fn new(db: web::Data<CachedDataBase>) -> Memory {
+        Memory {
+            device_state: DeviceState::default(),
+            scenes: SceneManager::default(),
+            db,
+        }
+    }
+
+    pub async fn handle_device_message(
+        &self,
+        message: DeviceMessage,
+        mqtt: web::Data<AsyncClient>,
+        sse_handler: web::Data<RwLock<SseHandler>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let session = self.db.get_session().await?;
+        let device_id: i32 = session.get_device_id_by_mac(&message.efuse_mac).await?;
+        // record status in the memory
+        self.device_state.on_device_message(device_id, message.clone()).await;
+        match message.type_.as_str() {
+            "status" => {
+                // store status to database
+                session.update_device_status(device_id, message.payload).await?;
+
+                // handle sse session
+                let account_ids = session.get_account_ids_by_device_id(device_id).await?;
+                debug!("account_ids: {:?}", account_ids);
+                for account_id in account_ids {
+                    debug!("account_id: {}", account_id);
+                    let mut sse = sse_handler.write().await;
+                    info!("send sse message");
+                    sse.send(account_id, device_id.to_string().as_str()).await;
+                }
+            }
+
+            "event" => {
+                // store event to database
+                session.record_device_event(device_id, message.payload.clone()).await?;
+
+
+                // event trigger actions
+                let trigger = Trigger {
+                    efuse_mac: message.efuse_mac.clone(),
+                    payload: message.payload.clone(),
+                };
+
+                let actions = self.scenes.try_trigger(trigger).await;
+                for action in actions {
+                    if let Err(e) = execute_action(action.clone(), self.db.clone(), mqtt.clone()).await {
+                        error!("execute_action error: {:?}", e);
+                    }
+                }
+            }
+
+            t => {
+                info!("mqtt message type: {} not support", t);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl DeviceState {
@@ -33,7 +99,7 @@ impl DeviceState {
     pub async fn on_device_message(
         &self,
         device_id: i32,
-        message: DeviceMessage) -> Option<i32>
+        message: DeviceMessage)
     {
         {
             let mut guard = self.online.write().await;
@@ -43,47 +109,24 @@ impl DeviceState {
         match message.type_.as_str() {
             "status" => {
                 self.on_device_status(device_id, message.payload).await;
-                Some(device_id)
             }
             "event" => {
                 self.on_device_event(device_id, message.payload).await;
-                None
             }
             s => {
                 error!("not supported message type {s}");
-                None
             }
         }
     }
     async fn on_device_status(&self, device_id: i32, status: serde_json::Value) {
+        info!("update device status {} {:?}", device_id, &status);
         let mut guard = self.status.write().await;
         guard.insert(device_id, status);
     }
     async fn on_device_event(&self, device_id: i32, event: serde_json::Value) {
+        info!("get device event {} {:?}", device_id, &event);
         let mut guard = self.events.write().await;
         guard.entry(device_id).or_insert(VecDeque::new()).push_back(event);
-    }
-    pub async fn update_all_devices_status(&mut self, client: &mut AsyncClient) {
-        let message = HostToDeviceMessage::new("status".to_string(), None);
-        if let Err(e) = client.publish("/device", QoS::AtLeastOnce, false, message).await {
-            error!("error publishing device message {e}");
-        }
-    }
-
-    pub async fn update_device_status(
-        device_mac: &str,
-        client: &mut AsyncClient,
-    ) -> Result<(), ClientError> {
-        let message = HostToDeviceMessage::new("status".to_string(), None);
-
-        client
-            .publish(
-                format!("/device/{}/service", device_mac),
-                QoS::AtLeastOnce,
-                false,
-                message,
-            )
-            .await
     }
 }
 

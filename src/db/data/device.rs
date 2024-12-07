@@ -1,9 +1,10 @@
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, AreaInfo, DeviceInfo, DeviceType, HouseInfo};
-use crate::dto::http::response::{AccountDevices, AreaDevices, HouseDevices};
-use deadpool_postgres::PoolError;
-use tokio_postgres::Error;
 use crate::dto::http::request::DeviceUpdate;
+use crate::dto::http::response::{AccountDevices, AreaDevices, HouseDevices};
+use deadpool_postgres::{GenericClient, PoolError};
+use serde_json::Value;
+use tokio_postgres::Error;
 
 impl Session {
     pub async fn delete_device(&self, device_id: i32) -> Result<u64, Error> {
@@ -23,7 +24,7 @@ impl Session {
         let row =
             self.0.query_one(
                 "INSERT INTO device (device_name, efuse_mac, area_id, created_by, model_id) VALUES ($1, $2, $3, $4, $5) RETURNING device_id",
-                       &[&device_name, &efuse_mac, &area_id, &account_id, &model_id]).await?;
+                &[&device_name, &efuse_mac, &area_id, &account_id, &model_id]).await?;
         let device_id = row.get("device_id");
         Ok(device_id)
     }
@@ -84,6 +85,33 @@ impl Session {
                 &[&device_name, &efuse_mac, &area_id, &account_id, &model_id],
             )
             .await
+    }
+
+    pub async fn record_device_event(&self, device_id: i32, event: Value) -> Result<u64, Error> {
+        self.0.execute(
+            "INSERT INTO \
+                        device_event \
+                        (device_id, event) \
+                    VALUES ($1, $2)", &[&device_id, &event],
+        ).await
+    }
+
+    pub async fn update_device_status(&self, device_id: i32, status: Value) -> Result<u64, Error> {
+        self.0.execute(
+            "INSERT INTO \
+                        device_status \
+                        (device_id, status) \
+                    VALUES ($1, $2) \
+                    ON CONFLICT (device_id) \
+                    DO UPDATE SET \
+                        status = EXCLUDED.status, \
+                        time = CURRENT_TIMESTAMP;", &[&device_id, &status],
+        ).await
+    }
+
+    pub async fn get_device_status(&self, device_id: i32) -> Result<String, Error> {
+        self.0.query_one("SELECT status FROM device_status WHERE device_id = $1", &[&device_id])
+            .await.map(|row| row.get(0))
     }
 
     pub async fn get_device_mac_by_id(&self, device_id: i32) -> Result<String, PoolError> {

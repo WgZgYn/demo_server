@@ -21,6 +21,9 @@ impl HostToDeviceMessage {
     pub fn new(service: String, body: Option<serde_json::Value>) -> HostToDeviceMessage {
         HostToDeviceMessage { service_name: service, payload: body }
     }
+    pub fn status() -> HostToDeviceMessage {
+        HostToDeviceMessage::new("status".to_string(), None)
+    }
 }
 
 impl Into<Vec<u8>> for HostToDeviceMessage {
