@@ -118,10 +118,12 @@ impl Session {
 
         let mut query = "UPDATE account SET ".to_string();
         let mut params = Vec::<&(dyn tokio_postgres::types::ToSql + Sync)>::new();
+        let mut head = true;
 
         if let Some(new_username) = account_name.as_ref() {
             params.push(new_username);
             query.push_str(&format!(" username = ${} ", params.len()));
+            head = false;
         }
 
         let salt;
@@ -133,11 +135,11 @@ impl Session {
             hash = password_hash(&new_password, &salt);
 
             params.push(&hash);
-            query.push_str(&format!(" , password_hash = ${} ", params.len()));
+            query.push_str(&format!(" {} password_hash = ${} ", if head { "" } else { "," }, params.len()));
             hstr = hex::encode(salt);
 
             params.push(&hstr);
-            query.push_str(&format!(" , salt = ${} ", params.len()));
+            query.push_str(&format!(" {} salt = ${} ", if head { "" } else { "," }, params.len()));
         }
 
         params.push(&account_id);
