@@ -2,12 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 // When an Event was in the set of trigger, it will cause all the actions
+#[derive(Serialize, Deserialize)]
 pub struct Scene {
-    scene_id: i32,
-    scene_name: String,
-    house_id: String,
-    triggers: HashSet<Trigger>,
-    actions: Vec<Action>,
+    pub scene_id: i32,
+    pub scene_name: String,
+    pub house_id: String,
+    pub triggers: HashSet<Trigger>,
+    pub actions: Vec<Action>,
 }
 impl Scene {
     pub fn trigger(&self, trigger: &Trigger) -> Option<&Vec<Action>> {
@@ -19,10 +20,19 @@ impl Scene {
     }
 }
 
+// TODO:
 #[derive(Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Trigger {
     pub efuse_mac: String,
     pub payload: serde_json::Value,
+}
+
+pub struct TimeTrigger {}
+
+#[derive(Deserialize, Serialize, Eq, PartialEq, Hash)]
+pub struct TriggerEntity {
+    pub trigger_type: String,
+    pub data: serde_json::Value,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

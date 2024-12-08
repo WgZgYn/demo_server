@@ -1,9 +1,10 @@
 use crate::db::DataBase;
 use crate::dto::http::request::SceneAdd;
+use crate::security::auth::{get_id_from_http_request, Claims};
 use crate::utils;
+use crate::utils::Response;
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use log::error;
-use crate::security::auth::Claims;
 
 pub async fn add_scene(
     data: web::Json<SceneAdd>,
@@ -11,8 +12,7 @@ pub async fn add_scene(
     db: web::Data<DataBase>,
 ) -> HttpResponse {
     // TODO: judge whether the user can
-
-    let mut session = match db.get_session().await {
+    let session = match db.get_session().await {
         Ok(session) => session,
         Err(e) => {
             error!("{e}");
@@ -46,9 +46,8 @@ pub async fn delete_scene(id: web::Path<i32>, db: web::Data<DataBase>) -> HttpRe
 }
 
 pub async fn get_scene(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
-    let e = req.extensions();
-    let claims = match e.get::<Claims>() {
-        Some(claims) => claims,
+    let id = match get_id_from_http_request(&req) {
+        Some(id) => id,
         None => return HttpResponse::Unauthorized().finish(),
     };
 
@@ -60,8 +59,11 @@ pub async fn get_scene(req: HttpRequest, db: web::Data<DataBase>) -> HttpRespons
         }
     };
 
-    match session.get_scene(claims.id()).await {
-        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+    match session.get_scene(id).await {
+        Ok(v) => HttpResponse::Ok().json(Response::success(v)),
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
