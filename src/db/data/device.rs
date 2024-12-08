@@ -320,7 +320,7 @@ impl Session {
                         JOIN member USING(account_id)
                         JOIN house USING(house_id)
                         JOIN area USING(house_id)
-                        JOIN device USING(device_id)
+                        JOIN device USING(area_id)
                         WHERE account_id = $1 AND device_id = $2",
                 &[&account_id, &device_id],
             )
