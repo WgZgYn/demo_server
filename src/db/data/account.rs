@@ -1,12 +1,12 @@
-use std::collections::HashSet;
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, UserInfo};
 use crate::dto::http::request::{AccountUpdate, AreaUpdate, UserInfoUpdate};
 use crate::security::auth::{create_token, Role};
+use crate::security::hash::{gen_salt, password_hash, password_verify};
 use deadpool_postgres::{GenericClient, PoolError};
 use log::debug;
+use std::collections::HashSet;
 use tokio_postgres::Error;
-use crate::security::hash::{gen_salt, password_hash, password_verify};
 
 impl Session {
     pub async fn get_user_info(&self, account_id: i32) -> Result<UserInfo, PoolError> {

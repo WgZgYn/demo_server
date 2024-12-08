@@ -1,6 +1,7 @@
 mod ping;
 mod test_auth;
 
+use crate::api::sse::sse_test;
 use crate::security::auth::Auth;
 use crate::utils;
 use actix_web::web::ServiceConfig;
@@ -8,7 +9,6 @@ use actix_web::{web, HttpResponse};
 pub use ping::ping;
 use rumqttc::AsyncClient;
 pub use test_auth::get_auth_info;
-use crate::api::sse::sse_test;
 
 async fn test_mqtt(client: web::Data<AsyncClient>) -> HttpResponse {
     println!("test_mqtt client: {:?}", client);

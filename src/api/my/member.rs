@@ -1,9 +1,9 @@
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use log::error;
 use crate::db::DataBase;
 use crate::dto::http::request::{MemberAdd, MemberDelete};
 use crate::security::auth::Claims;
 use crate::utils::Response;
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use log::error;
 
 pub async fn delete_member(data: web::Json<MemberDelete>, db: web::Data<DataBase>) -> HttpResponse {
     let session = match db.get_session().await {

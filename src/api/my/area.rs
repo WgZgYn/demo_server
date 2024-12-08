@@ -2,7 +2,6 @@ pub mod root {
     use crate::db::DataBase;
     use crate::dto::http::request::AreaAdd;
     use crate::security::auth::Claims;
-    use crate::utils;
     use crate::utils::Response;
     use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
     use log::error;
@@ -63,11 +62,10 @@ pub mod root {
     pub mod id {
         use crate::db::DataBase;
         use crate::dto::http::request::AreaUpdate;
+        use crate::utils;
         use crate::utils::Response;
         use actix_web::{web, HttpRequest, HttpResponse};
-        use deadpool_postgres::PoolError;
         use log::error;
-        use crate::utils;
 
         pub async fn get_area_info(
             data: web::Path<i32>,

@@ -1,4 +1,3 @@
-use std::error::Error;
 use crate::data::sse::SseHandler;
 use crate::db::{CachedDataBase, Memory};
 use crate::dto::mqtt::{DeviceMessage, HostToDeviceMessage};
@@ -7,6 +6,7 @@ use crate::utils::config::MqttConfig;
 use actix_web::web;
 use log::{debug, error, info};
 use rumqttc::{AsyncClient, ClientError, Event, EventLoop, Incoming, MqttOptions, QoS};
+use std::error::Error;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::time::Interval;
@@ -70,14 +70,12 @@ pub async fn update_device_status(
     client: web::Data<AsyncClient>,
 ) -> Result<(), ClientError> {
     let message = HostToDeviceMessage::status();
-    client
-        .publish(
-            format!("/device/{}/service", device_mac),
-            QoS::AtLeastOnce,
-            false,
-            message,
-        )
-        .await
+    client.publish(
+        format!("/device/{}/service", device_mac),
+        QoS::AtLeastOnce,
+        false,
+        message,
+    ).await
 }
 
 async fn handle_device_message(

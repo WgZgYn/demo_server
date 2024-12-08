@@ -4,7 +4,7 @@ use crate::api::sse::sse_account;
 use crate::api::test::config_test;
 use crate::security::auth::Auth;
 use crate::utils;
-use actix_web::{web, HttpMessage, HttpResponse};
+use actix_web::{web, HttpResponse};
 
 pub mod my;
 mod sse;

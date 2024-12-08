@@ -1,4 +1,3 @@
-use deadpool_postgres::GenericClient;
 use crate::db::database::Session;
 use crate::dto::entity::simple::AreaInfo;
 use tokio_postgres::Error;

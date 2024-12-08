@@ -28,7 +28,6 @@ pub mod root {
         }
     }
 
-    // TODO: test
     pub async fn add_house(
         data: web::Json<HouseAdd>,
         req: HttpRequest,
@@ -62,18 +61,17 @@ pub mod root {
         use crate::db::DataBase;
         use crate::dto::entity::simple::HouseInfo;
         use crate::dto::http::request::HouseUpdate;
+        use crate::security::auth::{get_id_from_http_request, Claims};
         use crate::utils;
         use crate::utils::Response;
         use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
         use log::error;
         use std::error::Error;
         use std::future::Future;
-        use crate::security::auth::{get_id_from_http_request, Claims};
 
         pub async fn get_house_info(
             data: web::Path<i32>,
-            db: web::Data<DataBase>,
-            req: HttpRequest,
+            db: web::Data<DataBase>
         ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
@@ -95,7 +93,6 @@ pub mod root {
             id: web::Path<i32>,
             data: web::Json<HouseUpdate>,
             db: web::Data<DataBase>,
-            req: HttpRequest,
         ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
