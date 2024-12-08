@@ -65,7 +65,6 @@ pub async fn signup(data: web::Json<Signup>, db: web::Data<DataBase>) -> HttpRes
     HttpResponse::Ok().finish()
 }
 
-
 pub async fn delete_account(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
     let e = req.extensions();
     let claims = match e.get::<Claims>() {
@@ -75,16 +74,26 @@ pub async fn delete_account(req: HttpRequest, db: web::Data<DataBase>) -> HttpRe
 
     let mut session = match db.get_session().await {
         Ok(session) => session,
-        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+        Err(e) => {
+            error!("{}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     };
 
     match session.delete_account(claims.id()).await {
         Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
-pub async fn update_account(req: HttpRequest, account: web::Json<AccountUpdate>, db: web::Data<DataBase>) -> HttpResponse {
+pub async fn update_account(
+    req: HttpRequest,
+    account: web::Json<AccountUpdate>,
+    db: web::Data<DataBase>,
+) -> HttpResponse {
     let e = req.extensions();
     let claims = match e.get::<Claims>() {
         Some(claims) => claims,
@@ -93,15 +102,23 @@ pub async fn update_account(req: HttpRequest, account: web::Json<AccountUpdate>,
 
     let session = match db.get_session().await {
         Ok(session) => session,
-        Err(e) => { error!("{}", e); return HttpResponse::InternalServerError().finish(); }
+        Err(e) => {
+            error!("{}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     };
 
-    match session.update_account(account.into_inner(), claims.id()).await {
+    match session
+        .update_account(account.into_inner(), claims.id())
+        .await
+    {
         Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-        Err(e) => { error!("{}", e); HttpResponse::InternalServerError().finish() }
+        Err(e) => {
+            error!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
-
 
 pub async fn get_user_info(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
     let e = req.extensions();

@@ -27,7 +27,6 @@ pub async fn handle_mqtt_message(
         }
     });
 
-
     loop {
         match event_loop.poll().await {
             Ok(Event::Incoming(Incoming::Publish(publish))) => {
@@ -44,8 +43,12 @@ pub async fn handle_mqtt_message(
                     let mqtt = mqtt.clone();
                     tokio::spawn(async move {
                         match handle_device_message(message, memory, sse_handler, mqtt).await {
-                            Ok(_) => { info!("mqtt message handled successfully"); }
-                            Err(e) => { error!("mqtt message handled error: {:?}", e); }
+                            Ok(_) => {
+                                info!("mqtt message handled successfully");
+                            }
+                            Err(e) => {
+                                error!("mqtt message handled error: {:?}", e);
+                            }
                         };
                     });
                 }
@@ -60,7 +63,10 @@ pub async fn handle_mqtt_message(
 
 pub async fn update_all_devices_status(client: web::Data<AsyncClient>) {
     let message = HostToDeviceMessage::status();
-    if let Err(e) = client.publish("/device", QoS::AtLeastOnce, false, message).await {
+    if let Err(e) = client
+        .publish("/device", QoS::AtLeastOnce, false, message)
+        .await
+    {
         error!("error publishing device message {e}");
     }
 }
@@ -70,12 +76,14 @@ pub async fn update_device_status(
     client: web::Data<AsyncClient>,
 ) -> Result<(), ClientError> {
     let message = HostToDeviceMessage::status();
-    client.publish(
-        format!("/device/{}/service", device_mac),
-        QoS::AtLeastOnce,
-        false,
-        message,
-    ).await
+    client
+        .publish(
+            format!("/device/{}/service", device_mac),
+            QoS::AtLeastOnce,
+            false,
+            message,
+        )
+        .await
 }
 
 async fn handle_device_message(
@@ -85,10 +93,11 @@ async fn handle_device_message(
     mqtt: web::Data<AsyncClient>,
 ) -> Result<(), Box<dyn Error>> {
     info!("handle device message from device_mac: {}", &msg.efuse_mac);
-    memory.handle_device_message(msg.clone(), mqtt, sse_handler).await?;
+    memory
+        .handle_device_message(msg.clone(), mqtt, sse_handler)
+        .await?;
     Ok(())
 }
-
 
 pub async fn execute_action(
     action: Action,
@@ -115,7 +124,7 @@ pub async fn send_host_message(
         false,
         message,
     )
-        .await
+    .await
 }
 
 pub async fn mqtt(cfg: &MqttConfig) -> (AsyncClient, EventLoop) {

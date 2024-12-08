@@ -1,10 +1,13 @@
 use crate::db::DataBase;
 use crate::security::auth::get_id_from_http_request;
 use actix_web::dev::forward_ready;
-use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, web, Error, FromRequest};
+use actix_web::{
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    web, Error, FromRequest,
+};
 use futures_util::future::LocalBoxFuture;
-use std::future::Ready;
 use log::info;
+use std::future::Ready;
 
 pub struct AccessAuth;
 
@@ -15,7 +18,7 @@ pub struct AccessAuthMiddleware<S> {
 
 impl<S, B> Transform<S, ServiceRequest> for AccessAuth
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
@@ -32,7 +35,7 @@ where
 
 impl<S, B> Service<ServiceRequest> for AccessAuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     B: 'static,
 {
@@ -49,21 +52,15 @@ where
         let house_id = web::Path::<i32>::extract(rq).into_inner();
 
         if account_id.is_err() {
-            return Box::pin(async {
-                Err(actix_web::error::ErrorUnauthorized("no account_id"))
-            });
+            return Box::pin(async { Err(actix_web::error::ErrorUnauthorized("no account_id")) });
         }
 
         if house_id.is_err() {
-            return Box::pin(async {
-                Err(actix_web::error::ErrorBadRequest("no house_id"))
-            });
+            return Box::pin(async { Err(actix_web::error::ErrorBadRequest("no house_id")) });
         }
 
         if db.is_err() {
-            return Box::pin(async {
-                Err(actix_web::error::ErrorInternalServerError("db error"))
-            });
+            return Box::pin(async { Err(actix_web::error::ErrorInternalServerError("db error")) });
         }
 
         let account_id = account_id.unwrap();
@@ -83,7 +80,11 @@ where
         })
     }
 }
-async fn check_access(db: web::Data<DataBase>, account_id: i32, house_id: i32) -> Result<bool, Box<dyn std::error::Error>> {
+async fn check_access(
+    db: web::Data<DataBase>,
+    account_id: i32,
+    house_id: i32,
+) -> Result<bool, Box<dyn std::error::Error>> {
     let session = db.get_session().await?;
     Ok(session.is_member(account_id, house_id).await)
 }

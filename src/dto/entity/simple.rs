@@ -36,6 +36,7 @@ pub struct DeviceInfo {
     pub model_name: String,
     pub device_type: DeviceType,
     pub service: Vec<Value>,
+    // pub status: Value, // TODO:
 }
 
 #[derive(Serialize, Deserialize)]

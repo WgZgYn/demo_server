@@ -1,0 +1,151 @@
+###
+POST localhost:8123/api/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "456789"
+}
+
+> {% client.global.set("token", response.body.data.token); %}
+
+###
+
+
+
+
+###
+PATCH localhost:8123/api/account
+Authorization: Bearer {{temp-token}}
+Content-Type: application/json
+
+{
+  "old_password": "123456",
+  "new_password": "456789"
+}
+
+
+###
+POST localhost:8123/api/login
+Content-Type: application/json
+
+{
+  "username": "wzy",
+  "password": "123456"
+}
+
+> {% client.global.set("token", response.body.data.token); %}
+
+###
+GET localhost:8123/api/sse
+Authorization: Bearer {{token}}
+
+###
+GET localhost:8123/api/my/device
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/my/house
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/my/area
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/my/device/4
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/userinfo
+Authorization: Bearer {{token}}
+###
+POST localhost:8123/api/userinfo
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "age": 19
+}
+###
+GET localhost:8123/api/my/device/4/service/switch
+Authorization: Bearer {{token}}
+###
+GET localhost:8123/api/my/device/4/service/close
+Authorization: Bearer {{token}}
+###
+POST localhost:8123/api/my/device/4/service/light
+Authorization: Bearer {{token}}
+Content-Type: text/plain
+
+50
+###
+GET localhost:8123/api/my/device/4/status
+Authorization: Bearer {{token}}
+
+###
+GET localhost:8123/api/my/scene
+Authorization: Bearer {{token}}
+
+###
+POST localhost:8123/api/my/scene
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "scene_name": "testScene",
+  "triggers": [
+    {
+      "type": "time",
+      "data": "8:00"
+    }
+  ],
+  "actions": [
+    {
+      "device_id": 4,
+      "service_name": "light",
+      "body": "75"
+    }
+  ],
+  "house_id": 8
+}
+
+###
+POST localhost:8123/api/my/scene
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "scene_name": "testScene",
+  "triggers": [
+    {
+      "efuse_mac": "228763145097100",
+      "payload": "open"
+    }
+  ],
+  "actions": [
+    {
+      "device_id": 4,
+      "service_name": "light",
+      "body": "75"
+    }
+  ],
+  "house_id": 8
+}
+
+
+###
+GET localhost:8123/api/test/sse
+Authorization: Bearer {{token}}
+###
+
+
+###
+PATCH localhost:8123/api/my/device/4
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "device_name": "ESP32-Light-Blue"
+}
+
+
+###
+GET localhost:8123/api/my/house/8
+Authorization: Bearer {{token}}

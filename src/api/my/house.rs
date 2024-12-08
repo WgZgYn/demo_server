@@ -69,10 +69,7 @@ pub mod root {
         use std::error::Error;
         use std::future::Future;
 
-        pub async fn get_house_info(
-            data: web::Path<i32>,
-            db: web::Data<DataBase>
-        ) -> HttpResponse {
+        pub async fn get_house_info(data: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
                 Err(e) => {
@@ -114,7 +111,11 @@ pub mod root {
             }
         }
 
-        pub async fn delete_house(req: HttpRequest, house_id: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
+        pub async fn delete_house(
+            req: HttpRequest,
+            house_id: web::Path<i32>,
+            db: web::Data<DataBase>,
+        ) -> HttpResponse {
             let account_id = match get_id_from_http_request(&req) {
                 Some(id) => id,
                 None => return HttpResponse::Unauthorized().finish(),
@@ -128,18 +129,22 @@ pub mod root {
                 }
             };
 
-            match session.is_house_created_by(house_id.clone(), account_id).await {
-                Ok(true) => {
-                    match session.delete_house(house_id.into_inner()).await {
-                        Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
-                        Err(e) => {
-                            error!("{}", e);
-                            HttpResponse::InternalServerError().finish()
-                        }
+            match session
+                .is_house_created_by(house_id.clone(), account_id)
+                .await
+            {
+                Ok(true) => match session.delete_house(house_id.into_inner()).await {
+                    Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
+                    Err(e) => {
+                        error!("{}", e);
+                        HttpResponse::InternalServerError().finish()
                     }
-                }
+                },
                 Ok(false) => {
-                    match session.delete_member(house_id.into_inner(), account_id).await {
+                    match session
+                        .delete_member(house_id.into_inner(), account_id)
+                        .await
+                    {
                         Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                         Err(e) => {
                             error!("{}", e);

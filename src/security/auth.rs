@@ -58,7 +58,7 @@ pub fn create_token(user: String, role: Role, id: i32) -> String {
         // This can be lazy init
         &EncodingKey::from_secret(SECRET_KEY),
     )
-        .unwrap();
+    .unwrap();
     token
 }
 
@@ -90,7 +90,7 @@ pub struct Auth;
 
 impl<S, B> Transform<S, ServiceRequest> for Auth
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -111,7 +111,7 @@ pub struct AuthMiddleware<S> {
 
 impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
     actix_web::dev::Response<B>: From<HttpResponse>,
 {
@@ -138,7 +138,7 @@ where
         if let Some(token) = token {
             if let Ok(token_data) = validate_token(token) {
                 req.extensions_mut().insert(token_data.claims); // 将 Claims 存储到 req 中
-                // 如果 JWT 验证通过，继续处理请求
+                                                                // 如果 JWT 验证通过，继续处理请求
                 let fut = self.service.call(req);
                 return Box::pin(async move {
                     let res = fut.await?;
@@ -154,7 +154,6 @@ where
         })
     }
 }
-
 
 pub fn get_id_from_http_request(req: &HttpRequest) -> Option<i32> {
     let e = req.extensions();

@@ -1,8 +1,8 @@
 mod area;
 mod device;
 mod house;
-mod scene;
 mod member;
+mod scene;
 
 use crate::api::my::area::root::id::*;
 use crate::api::my::area::root::*;
@@ -57,14 +57,12 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             .route(web::post().to(add_house)),
                     )
                     .service(
-                        web::scope("/{id}")
-                            .wrap(AccessAuth)
-                            .service(
-                                web::resource("")
-                                    .route(web::get().to(get_house_info))
-                                    .route(web::patch().to(update_house_info))
-                                    .route(web::delete().to(delete_house))
-                            )
+                        web::scope("/{id}").wrap(AccessAuth).service(
+                            web::resource("")
+                                .route(web::get().to(get_house_info))
+                                .route(web::patch().to(update_house_info))
+                                .route(web::delete().to(delete_house)),
+                        ),
                     ),
             )
             .service(
@@ -79,7 +77,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             web::resource("")
                                 .route(web::get().to(get_area_info))
                                 .route(web::patch().to(update_area_info))
-                                .route(web::delete().to(delete_area))
+                                .route(web::delete().to(delete_area)),
                         ),
                     ),
             )

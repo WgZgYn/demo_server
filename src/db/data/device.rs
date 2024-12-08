@@ -88,30 +88,41 @@ impl Session {
     }
 
     pub async fn record_device_event(&self, device_id: i32, event: Value) -> Result<u64, Error> {
-        self.0.execute(
-            "INSERT INTO \
+        self.0
+            .execute(
+                "INSERT INTO \
                         device_event \
                         (device_id, event) \
-                    VALUES ($1, $2)", &[&device_id, &event],
-        ).await
+                    VALUES ($1, $2)",
+                &[&device_id, &event],
+            )
+            .await
     }
 
     pub async fn update_device_status(&self, device_id: i32, status: Value) -> Result<u64, Error> {
-        self.0.execute(
-            "INSERT INTO \
+        self.0
+            .execute(
+                "INSERT INTO \
                         device_status \
                         (device_id, status) \
                     VALUES ($1, $2) \
                     ON CONFLICT (device_id) \
                     DO UPDATE SET \
                         status = EXCLUDED.status, \
-                        time = CURRENT_TIMESTAMP;", &[&device_id, &status],
-        ).await
+                        time = CURRENT_TIMESTAMP;",
+                &[&device_id, &status],
+            )
+            .await
     }
 
     pub async fn get_device_status(&self, device_id: i32) -> Result<Value, Error> {
-        self.0.query_one("SELECT status FROM device_status WHERE device_id = $1", &[&device_id])
-            .await.map(|row| row.get(0))
+        self.0
+            .query_one(
+                "SELECT status FROM device_status WHERE device_id = $1",
+                &[&device_id],
+            )
+            .await
+            .map(|row| row.get(0))
     }
 
     pub async fn get_device_mac_by_id(&self, device_id: i32) -> Result<String, PoolError> {

@@ -5,8 +5,17 @@ use deadpool_postgres::{GenericClient, PoolError};
 use tokio_postgres::Error;
 
 impl Session {
-    pub async fn update_house_info(&self, house_id: i32, data: HouseUpdate) -> Result<(), PoolError> {
-        self.0.execute("UPDATE house SET house_name = $1 WHERE house_id = $2", &[&data.house_name, &house_id]).await?;
+    pub async fn update_house_info(
+        &self,
+        house_id: i32,
+        data: HouseUpdate,
+    ) -> Result<(), PoolError> {
+        self.0
+            .execute(
+                "UPDATE house SET house_name = $1 WHERE house_id = $2",
+                &[&data.house_name, &house_id],
+            )
+            .await?;
         Ok(())
     }
 
@@ -24,8 +33,18 @@ impl Session {
         })
     }
 
-    pub async fn is_house_created_by(&self, house_id: i32, account_id: i32) -> Result<bool, PoolError> {
-        let creator = self.0.query_one("SELECT created_by FROM house WHERE house_id = $1", &[&house_id]).await?;
+    pub async fn is_house_created_by(
+        &self,
+        house_id: i32,
+        account_id: i32,
+    ) -> Result<bool, PoolError> {
+        let creator = self
+            .0
+            .query_one(
+                "SELECT created_by FROM house WHERE house_id = $1",
+                &[&house_id],
+            )
+            .await?;
         let created_by: i32 = creator.get("created_by");
         Ok(created_by == account_id)
     }

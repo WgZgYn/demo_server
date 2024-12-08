@@ -1,4 +1,6 @@
-use crate::api::account::{delete_account, get_user_info, login, signup, update_account, update_user_info};
+use crate::api::account::{
+    delete_account, get_user_info, login, signup, update_account, update_user_info,
+};
 use crate::api::my::config_my;
 use crate::api::sse::sse_account;
 use crate::api::test::config_test;
@@ -6,10 +8,10 @@ use crate::security::auth::Auth;
 use crate::utils;
 use actix_web::{web, HttpResponse};
 
+mod account;
 pub mod my;
 mod sse;
 pub mod test;
-mod account;
 
 pub async fn login_token() -> HttpResponse {
     HttpResponse::Ok().json(utils::Result::success())
@@ -29,7 +31,7 @@ pub fn config_api(cfg: &mut web::ServiceConfig) {
                 web::resource("/account")
                     .wrap(Auth)
                     .route(web::patch().to(update_account))
-                    .route(web::delete().to(delete_account))
+                    .route(web::delete().to(delete_account)),
             )
             .service(
                 web::resource("/userinfo")

@@ -115,7 +115,10 @@ pub mod root {
                 }
             };
 
-            match session.update_device_info(id.into_inner(), data.into_inner()).await {
+            match session
+                .update_device_info(id.into_inner(), data.into_inner())
+                .await
+            {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                 Err(e) => {
                     error!("{}", e);
@@ -153,9 +156,7 @@ pub mod root {
             ) -> HttpResponse {
                 info!("get_device_status {}", path.clone());
                 match memory.get_device_status(path.into_inner()).await {
-                    Ok(v) => {
-                        HttpResponse::Ok().json(Response::success(v))
-                    }
+                    Ok(v) => HttpResponse::Ok().json(Response::success(v)),
                     Err(e) => {
                         error!("{}", e);
                         HttpResponse::InternalServerError().finish()
@@ -203,7 +204,8 @@ pub mod root {
                     Ok(mac) => mac,
                     Err(e) => {
                         error!("{e}");
-                        return HttpResponse::NotFound().json(utils::Result::error("no such device"));
+                        return HttpResponse::NotFound()
+                            .json(utils::Result::error("no such device"));
                     }
                 };
 

@@ -13,7 +13,10 @@ pub async fn delete_member(data: web::Json<MemberDelete>, db: web::Data<DataBase
             return HttpResponse::InternalServerError().finish();
         }
     };
-    let MemberDelete { house_id, account_id } = data.into_inner();
+    let MemberDelete {
+        house_id,
+        account_id,
+    } = data.into_inner();
     match session.delete_member(house_id, account_id).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
@@ -31,7 +34,10 @@ pub async fn add_member(data: web::Json<MemberAdd>, db: web::Data<DataBase>) -> 
             return HttpResponse::InternalServerError().finish();
         }
     };
-    let MemberAdd { house_id, account_id } = data.into_inner();
+    let MemberAdd {
+        house_id,
+        account_id,
+    } = data.into_inner();
     match session.add_member(house_id, account_id).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {

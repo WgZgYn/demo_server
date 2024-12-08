@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::collections::HashSet;
 #[derive(Deserialize)]
 pub struct HouseUpdate {
-    pub house_name: String
+    pub house_name: String,
 }
 
 #[derive(Deserialize)]
@@ -14,7 +14,7 @@ pub struct AreaUpdate {
 #[derive(Deserialize)]
 pub struct DeviceUpdate {
     pub device_name: Option<String>,
-    pub area_id: Option<i32>
+    pub area_id: Option<i32>,
 }
 
 #[derive(Deserialize)]
@@ -75,4 +75,3 @@ pub struct MemberAdd {
     pub account_id: i32,
     pub house_id: i32,
 }
-

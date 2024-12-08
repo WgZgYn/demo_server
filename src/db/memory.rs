@@ -16,7 +16,6 @@ pub struct DeviceState {
     events: RwLock<HashMap<i32, VecDeque<serde_json::Value>>>,
 }
 
-
 #[derive(Default)]
 pub struct SceneManager {
     scenes: RwLock<Vec<Scene>>,
@@ -46,11 +45,15 @@ impl Memory {
         let session = self.db.get_session().await?;
         let device_id: i32 = session.get_device_id_by_mac(&message.efuse_mac).await?;
         // record status in the memory
-        self.device_state.on_device_message(device_id, message.clone()).await;
+        self.device_state
+            .on_device_message(device_id, message.clone())
+            .await;
         match message.type_.as_str() {
             "status" => {
                 // store status to database
-                session.update_device_status(device_id, message.payload).await?;
+                session
+                    .update_device_status(device_id, message.payload)
+                    .await?;
 
                 // handle sse session
                 let account_ids = session.get_account_ids_by_device_id(device_id).await?;
@@ -65,8 +68,9 @@ impl Memory {
 
             "event" => {
                 // store event to database
-                session.record_device_event(device_id, message.payload.clone()).await?;
-
+                session
+                    .record_device_event(device_id, message.payload.clone())
+                    .await?;
 
                 // event trigger actions
                 let trigger = Trigger {
@@ -76,7 +80,9 @@ impl Memory {
 
                 let actions = self.scenes.try_trigger(trigger).await;
                 for action in actions {
-                    if let Err(e) = execute_action(action.clone(), self.db.clone(), mqtt.clone()).await {
+                    if let Err(e) =
+                        execute_action(action.clone(), self.db.clone(), mqtt.clone()).await
+                    {
                         error!("execute_action error: {:?}", e);
                     }
                 }
@@ -89,7 +95,10 @@ impl Memory {
         Ok(())
     }
 
-    pub async fn get_device_status(&self, device_id: i32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    pub async fn get_device_status(
+        &self,
+        device_id: i32,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         let status = self.device_state.status(device_id).await;
         if let Some(status) = status {
             return Ok(status);
@@ -106,11 +115,7 @@ impl DeviceState {
         guard.get(&device_id).cloned()
     }
 
-    pub async fn on_device_message(
-        &self,
-        device_id: i32,
-        message: DeviceMessage)
-    {
+    pub async fn on_device_message(&self, device_id: i32, message: DeviceMessage) {
         {
             let mut guard = self.online.write().await;
             guard.insert(device_id, message.efuse_mac.clone());
@@ -136,10 +141,12 @@ impl DeviceState {
     async fn on_device_event(&self, device_id: i32, event: serde_json::Value) {
         info!("get device event {} {:?}", device_id, &event);
         let mut guard = self.events.write().await;
-        guard.entry(device_id).or_insert(VecDeque::new()).push_back(event);
+        guard
+            .entry(device_id)
+            .or_insert(VecDeque::new())
+            .push_back(event);
     }
 }
-
 
 impl SceneManager {
     pub async fn try_trigger(&self, trigger: Trigger) -> Vec<Action> {

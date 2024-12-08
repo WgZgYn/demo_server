@@ -14,7 +14,9 @@ use tokio::sync::{Mutex, RwLock};
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::new().parse_filters("debug,rumqttc::state=off").init();
+    env_logger::Builder::new()
+        .parse_filters("debug,rumqttc::state=off")
+        .init();
 
     debug!("starting server");
 
@@ -55,13 +57,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // .configure(config_web)
         // .configure(config_redirects)
     })
-        .bind(format!(
-            "{ip}:{port}",
-            ip = &cfg.actix.ip,
-            port = &cfg.actix.port
-        ))?
-        .bind_openssl(format!("{}:443", &cfg.actix.ip), ssl)?
-        .run()
-        .await?;
+    .bind(format!(
+        "{ip}:{port}",
+        ip = &cfg.actix.ip,
+        port = &cfg.actix.port
+    ))?
+    .bind_openssl(format!("{}:443", &cfg.actix.ip), ssl)?
+    .run()
+    .await?;
     Ok(())
 }

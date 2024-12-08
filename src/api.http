@@ -59,8 +59,10 @@ Authorization: Bearer {{remote-rust-token}}
 Content-Type: application/json
 
 {
-  "age": 18,
-  "email": "abc@qq.com"
+  "age": 19,
+  "city": "平顶山",
+  "email": "abc@qq.com",
+  "gender": "male"
 }
 
 ### test device fetch
@@ -156,7 +158,7 @@ Content-Type: application/json
 }
 
 ### test device status -- if the device is offline, it will be 404, but it's normal and will be fixed later
-GET 47.108.27.238/api/my/device/21/status
+GET 47.108.27.238/api/my/device/22/status
 Authorization: Bearer {{remote-rust-token}}
 
 ### test device service

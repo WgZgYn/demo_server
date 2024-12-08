@@ -101,7 +101,10 @@ pub mod root {
                 }
             };
 
-            match session.update_area_info(data.into_inner(), id.into_inner()).await {
+            match session
+                .update_area_info(data.into_inner(), id.into_inner())
+                .await
+            {
                 Ok(_) => HttpResponse::Ok().json(utils::Result::success()),
                 Err(e) => {
                     error!("{}", e);
@@ -109,7 +112,11 @@ pub mod root {
                 }
             }
         }
-        pub async fn delete_area(id: web::Path<i32>, db: web::Data<DataBase>, req: HttpRequest) -> HttpResponse {
+        pub async fn delete_area(
+            id: web::Path<i32>,
+            db: web::Data<DataBase>,
+            req: HttpRequest,
+        ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
                 Err(e) => {

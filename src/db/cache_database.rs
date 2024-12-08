@@ -76,7 +76,7 @@ impl CacheSession {
             if let Some(v) = guard.get(device_mac) {
                 return Ok(*v);
             }
-        }// necessary to drop the guard
+        } // necessary to drop the guard
         let device_id = self.session.get_device_id_by_mac(device_mac).await?;
         {
             let mut guard = self.cache.device_mac2id.write().await;
@@ -89,7 +89,10 @@ impl CacheSession {
         Ok(device_id)
     }
 
-    pub async fn get_account_ids_by_device_id(&self, device_id: i32) -> Result<HashSet<i32>, PoolError> {
+    pub async fn get_account_ids_by_device_id(
+        &self,
+        device_id: i32,
+    ) -> Result<HashSet<i32>, PoolError> {
         {
             let guard = self.cache.device_id2account_ids.read().await;
             if let Some(v) = guard.get(&device_id) {

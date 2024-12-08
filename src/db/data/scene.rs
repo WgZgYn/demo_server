@@ -18,9 +18,9 @@ impl Session {
     }
 
     pub async fn delete_scene(&mut self, scene_id: i32) -> Result<u64, Error> {
-        self.0.execute(
-            "DELETE FROM scene WHERE scene_id = $1", &[&scene_id],
-        ).await
+        self.0
+            .execute("DELETE FROM scene WHERE scene_id = $1", &[&scene_id])
+            .await
     }
 
     pub async fn get_scene(&self, house_id: i32) -> Result<Vec<Scene>, Box<dyn std::error::Error>> {

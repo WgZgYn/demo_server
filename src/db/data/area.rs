@@ -73,13 +73,19 @@ impl Session {
     }
 
     pub async fn delete_area(&self, area_id: i32) -> Result<u64, Error> {
-        self.0.execute("DELETE FROM area WHERE area_id = $1", &[&area_id]).await
+        self.0
+            .execute("DELETE FROM area WHERE area_id = $1", &[&area_id])
+            .await
     }
 
     pub async fn delete_area_r(&mut self, area_id: i32) -> Result<(), Error> {
         let trans = self.0.transaction().await?;
-        trans.execute("DELETE FROM device WHERE area_id = $1", &[&area_id]).await?;
-        trans.execute("DELETE FROM area WHERE area_id = $1", &[&area_id]).await?;
+        trans
+            .execute("DELETE FROM device WHERE area_id = $1", &[&area_id])
+            .await?;
+        trans
+            .execute("DELETE FROM area WHERE area_id = $1", &[&area_id])
+            .await?;
         trans.commit().await
     }
 }

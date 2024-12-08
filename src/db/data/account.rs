@@ -109,9 +109,19 @@ impl Session {
         update: AccountUpdate,
         account_id: i32,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let row = self.0.query_one("SELECT password_hash FROM account WHERE account_id = $1", &[&account_id]).await?;
+        let row = self
+            .0
+            .query_one(
+                "SELECT password_hash FROM account WHERE account_id = $1",
+                &[&account_id],
+            )
+            .await?;
         let password: String = row.get("password_hash");
-        let AccountUpdate { account_name, old_password, new_password } = update;
+        let AccountUpdate {
+            account_name,
+            old_password,
+            new_password,
+        } = update;
         if !password_verify(&password, old_password.as_bytes()) {
             return Err("Invalid password".into());
         }
@@ -135,13 +145,21 @@ impl Session {
             hash = password_hash(&new_password, &salt);
 
             params.push(&hash);
-            query.push_str(&format!("{} password_hash = ${}", if head { "" } else { "," }, params.len()));
+            query.push_str(&format!(
+                "{} password_hash = ${}",
+                if head { "" } else { "," },
+                params.len()
+            ));
             hstr = hex::encode(salt);
 
             head = false;
 
             params.push(&hstr);
-            query.push_str(&format!("{} salt = ${}", if head { "" } else { "," }, params.len()));
+            query.push_str(&format!(
+                "{} salt = ${}",
+                if head { "" } else { "," },
+                params.len()
+            ));
         }
 
         params.push(&account_id);
@@ -226,12 +244,30 @@ impl Session {
         Ok(())
     }
 
-    pub async fn update_area_info(&self, area_update: AreaUpdate, area_id: i32) -> Result<u64, Error> {
-        self.0.execute("UPDATE area SET area_name = $1 WHERE area_id = $2", &[&area_update.area_name, &area_id]).await
+    pub async fn update_area_info(
+        &self,
+        area_update: AreaUpdate,
+        area_id: i32,
+    ) -> Result<u64, Error> {
+        self.0
+            .execute(
+                "UPDATE area SET area_name = $1 WHERE area_id = $2",
+                &[&area_update.area_name, &area_id],
+            )
+            .await
     }
 
-    pub async fn get_account_ids_by_device_id(&self, device_id: i32) -> Result<HashSet<i32>, PoolError> {
-        let rows = self.0.query("SELECT account_id FROM account_devices_view WHERE device_id = $1", &[&device_id]).await?;
+    pub async fn get_account_ids_by_device_id(
+        &self,
+        device_id: i32,
+    ) -> Result<HashSet<i32>, PoolError> {
+        let rows = self
+            .0
+            .query(
+                "SELECT account_id FROM account_devices_view WHERE device_id = $1",
+                &[&device_id],
+            )
+            .await?;
         Ok(rows.into_iter().map(|row| row.get(0)).collect())
     }
 }
