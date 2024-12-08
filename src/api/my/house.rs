@@ -2,7 +2,7 @@ pub mod root {
     use crate::db::DataBase;
     use crate::dto::http::request::HouseAdd;
     use crate::security::auth::Claims;
-    use crate::utils;
+
     use crate::utils::Response;
     use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
     use log::error;
@@ -59,15 +59,13 @@ pub mod root {
 
     pub mod id {
         use crate::db::DataBase;
-        use crate::dto::entity::simple::HouseInfo;
+
         use crate::dto::http::request::HouseUpdate;
-        use crate::security::auth::{get_id_from_http_request, Claims};
+        use crate::security::auth::get_id_from_http_request;
         use crate::utils;
         use crate::utils::Response;
-        use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+        use actix_web::{web, HttpRequest, HttpResponse};
         use log::error;
-        use std::error::Error;
-        use std::future::Future;
 
         pub async fn get_house_info(data: web::Path<i32>, db: web::Data<DataBase>) -> HttpResponse {
             let session = match db.get_session().await {

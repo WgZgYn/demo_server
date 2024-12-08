@@ -1,14 +1,14 @@
 use crate::db::DataBase;
 use crate::dto::http::request::SceneAdd;
-use crate::security::auth::{get_id_from_http_request, Claims};
+use crate::security::auth::get_id_from_http_request;
 use crate::utils;
 use crate::utils::Response;
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 use log::error;
 
 pub async fn add_scene(
     data: web::Json<SceneAdd>,
-    req: HttpRequest,
+    _req: HttpRequest,
     db: web::Data<DataBase>,
 ) -> HttpResponse {
     // TODO: judge whether the user can

@@ -64,13 +64,12 @@ pub mod root {
         use crate::dto::http::request::AreaUpdate;
         use crate::utils;
         use crate::utils::Response;
-        use actix_web::{web, HttpRequest, HttpResponse};
+        use actix_web::{web, HttpResponse};
         use log::error;
 
         pub async fn get_area_info(
             data: web::Path<i32>,
             db: web::Data<DataBase>,
-            req: HttpRequest,
         ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
@@ -91,7 +90,6 @@ pub mod root {
             id: web::Path<i32>,
             data: web::Json<AreaUpdate>,
             db: web::Data<DataBase>,
-            req: HttpRequest,
         ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,
@@ -115,7 +113,6 @@ pub mod root {
         pub async fn delete_area(
             id: web::Path<i32>,
             db: web::Data<DataBase>,
-            req: HttpRequest,
         ) -> HttpResponse {
             let session = match db.get_session().await {
                 Ok(session) => session,

@@ -1,11 +1,11 @@
 use crate::data::sse::SseHandler;
-use crate::db::{CachedDataBase, DataBase};
-use crate::dto::mqtt::{DeviceMessage, HostToDeviceMessage};
+use crate::db::CachedDataBase;
+use crate::dto::mqtt::DeviceMessage;
 use crate::service::event::{Action, Scene, Trigger};
 use crate::service::execute_action;
 use actix_web::web;
 use log::{debug, error, info};
-use rumqttc::{AsyncClient, ClientError, QoS};
+use rumqttc::AsyncClient;
 use std::collections::{HashMap, VecDeque};
 use tokio::sync::RwLock;
 

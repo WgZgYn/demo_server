@@ -73,23 +73,15 @@ pub mod root {
     pub mod id {
         use crate::db::DataBase;
         use crate::dto::http::request::DeviceUpdate;
-        use crate::security::auth::Claims;
         use crate::utils;
         use crate::utils::Response;
-        use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+        use actix_web::{web, HttpResponse};
         use log::error;
 
         pub async fn get_device_info(
-            req: HttpRequest,
             path: web::Path<i32>,
             db: web::Data<DataBase>,
         ) -> HttpResponse {
-            let e = req.extensions();
-            let claims = match e.get::<Claims>() {
-                Some(claims) => claims,
-                None => return HttpResponse::Unauthorized().finish(),
-            };
-
             match db.get_session().await {
                 Ok(session) => match session.get_device_info(*path).await {
                     Ok(v) => HttpResponse::Ok().json(Response::success(v)),
@@ -168,27 +160,19 @@ pub mod root {
         pub mod service {
             use crate::db::DataBase;
             use crate::dto::mqtt::HostToDeviceMessage;
-            use crate::security::auth::Claims;
             use crate::service::send_host_message;
             use crate::utils;
             use actix_web::web::Payload;
-            use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+            use actix_web::{web, HttpResponse};
             use log::{error, info};
             use rumqttc::AsyncClient;
 
             pub async fn execute_device_service(
-                req: HttpRequest,
                 service: web::Path<(i32, String)>,
                 mqtt: web::Data<AsyncClient>,
                 body: Payload,
                 db: web::Data<DataBase>,
             ) -> HttpResponse {
-                let e = req.extensions();
-                let claims = match e.get::<Claims>() {
-                    Some(claims) => claims,
-                    None => return HttpResponse::Unauthorized().finish(),
-                };
-
                 let (device_id, service_name) = service.into_inner();
                 info!("{} {}", device_id, &service_name);
 
