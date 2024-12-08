@@ -17,8 +17,11 @@ use crate::api::my::scene::{add_scene, delete_scene, get_scene};
 use crate::api::sse::sse_account;
 use crate::api::{get_user_info, update_user_info};
 use crate::security::auth::Auth;
+use crate::service::middleware::AccessAuth;
+use actix_web::body::MessageBody;
+use actix_web::dev::{Service, ServiceFactory};
 use actix_web::web::ServiceConfig;
-use actix_web::{web, Responder};
+use actix_web::{web, FromRequest, Responder};
 
 pub fn config_my(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -29,21 +32,21 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     .service(
                         web::resource("")
                             .route(web::get().to(get_all_devices))
-                            .route(web::post().to(add_device)), // TODO: Use/Test this api, phone will use this api
+                            .route(web::post().to(add_device)),
                     )
                     .service(
                         web::scope("/{id}")
                             .service(
                                 web::resource("")
                                     .route(web::get().to(get_device_info))
-                                    .route(web::patch().to(update_device_info)) // TODO: Use/Test this api
-                                    .route(web::delete().to(delete_device)), // TODO: Use/Test this api
+                                    .route(web::patch().to(update_device_info))
+                                    .route(web::delete().to(delete_device)),
                             )
                             .service(
                                 web::resource("/service/{name}")
                                     .route(web::to(execute_device_service)),
                             )
-                            .route("/status", web::get().to(get_device_status)), // TODO: Use/Test this api
+                            .route("/status", web::get().to(get_device_status)),
                     ),
             )
             .service(
@@ -55,6 +58,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     )
                     .service(
                         web::scope("/{id}")
+                            .wrap(AccessAuth)
                             .service(
                                 web::resource("")
                                     .route(web::get().to(get_house_info))
@@ -91,7 +95,6 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     .route(web::patch().to(update_user_info))
                     .route(web::put().to(update_user_info)),
             )
-            // TODO:
             .service(
                 web::resource("/scene")
                     .route(web::get().to(get_scene))

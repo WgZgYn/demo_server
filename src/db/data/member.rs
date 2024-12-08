@@ -1,7 +1,7 @@
-use deadpool_postgres::GenericClient;
-use tokio_postgres::Error;
 use crate::db::database::Session;
 use crate::dto::entity::simple::{AccountInfo, HouseInfo, HouseMember, MemberInfo};
+use deadpool_postgres::GenericClient;
+use tokio_postgres::Error;
 
 impl Session {
     pub async fn delete_member(&self, house_id: i32, account_id: i32) -> Result<u64, Error> {
@@ -98,5 +98,9 @@ impl Session {
         self.0.query("SELECT house_id FROM member WHERE account_id = $1", &[&account_id])
             .await
             .map(|rows| rows.into_iter().map(|row| row.get("account_id")).collect())
+    }
+
+    pub async fn is_member(&self, account_id: i32, house_id: i32) -> bool {
+        self.0.query_one("SELECT 1 FROM member WHERE account_id = $1 AND house_id = $2", &[&account_id, &house_id]).await.is_ok()
     }
 }
