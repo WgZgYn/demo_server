@@ -305,4 +305,26 @@ impl Session {
 
         self.0.execute(&p, &a).await
     }
+
+    pub async fn can_access_device_by(
+        &self,
+        device_id: i32,
+        account_id: i32,
+    ) -> Result<bool, Error> {
+        Ok(self
+            .0
+            .query_one(
+                "
+                        SELECT 1
+                        FROM account
+                        JOIN member USING(account_id)
+                        JOIN house USING(house_id)
+                        JOIN area USING(house_id)
+                        JOIN device USING(device_id)
+                        WHERE account_id = $1 AND device_id = $2",
+                &[&account_id, &device_id],
+            )
+            .await
+            .is_ok())
+    }
 }

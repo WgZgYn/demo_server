@@ -17,11 +17,9 @@ use crate::api::my::scene::{add_scene, delete_scene, get_scene};
 use crate::api::sse::sse_account;
 use crate::api::{get_user_info, update_user_info};
 use crate::security::auth::Auth;
-use crate::service::middleware::AccessAuth;
-use actix_web::body::MessageBody;
-use actix_web::dev::{Service, ServiceFactory};
+use crate::service::middleware::{AreaAccessAuth, DeviceAccessAuth, HouseAccessAuth};
+use actix_web::web;
 use actix_web::web::ServiceConfig;
-use actix_web::{web, FromRequest, Responder};
 
 pub fn config_my(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -36,6 +34,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                     )
                     .service(
                         web::scope("/{id}")
+                            .wrap(DeviceAccessAuth)
                             .service(
                                 web::resource("")
                                     .route(web::get().to(get_device_info))
@@ -57,7 +56,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             .route(web::post().to(add_house)),
                     )
                     .service(
-                        web::scope("/{id}").wrap(AccessAuth).service(
+                        web::scope("/{id}").wrap(HouseAccessAuth).service(
                             web::resource("")
                                 .route(web::get().to(get_house_info))
                                 .route(web::patch().to(update_house_info))
@@ -73,7 +72,7 @@ pub fn config_my(cfg: &mut ServiceConfig) {
                             .route(web::post().to(add_area)),
                     )
                     .service(
-                        web::scope("/{id}").service(
+                        web::scope("/{id}").wrap(AreaAccessAuth).service(
                             web::resource("")
                                 .route(web::get().to(get_area_info))
                                 .route(web::patch().to(update_area_info))

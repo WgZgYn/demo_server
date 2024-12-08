@@ -88,4 +88,21 @@ impl Session {
             .await?;
         trans.commit().await
     }
+
+    pub async fn can_access_area_by(&self, area_id: i32, account_id: i32) -> Result<bool, Error> {
+        Ok(self
+            .0
+            .query_one(
+                "
+                        SELECT 1
+                        FROM account
+                        JOIN member USING(account_id)
+                        JOIN house USING(house_id)
+                        JOIN area USING(house_id)
+                        WHERE account_id = $1 AND area_id = $2",
+                &[&account_id, &area_id],
+            )
+            .await
+            .is_ok())
+    }
 }
