@@ -1,5 +1,3 @@
-use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use log::{error, info};
 use crate::db::DataBase;
 use crate::dto::http::request::{AccountUpdate, Login, Signup, UserInfoUpdate};
 use crate::dto::http::response::LoginSuccess;
@@ -8,6 +6,8 @@ use crate::security::hash;
 use crate::security::hash::{gen_salt, password_hash};
 use crate::utils;
 use crate::utils::Response;
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use log::{error, info};
 
 pub async fn login(data: web::Json<Login>, db: web::Data<DataBase>) -> HttpResponse {
     let Login { username, password } = data.into_inner();
