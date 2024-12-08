@@ -1,15 +1,11 @@
 pub mod root {
-    use crate::db::{DataBase, Memory};
-    use crate::dto::entity::simple::{DeviceAdd, DeviceInfo};
+    use crate::db::DataBase;
+    use crate::dto::entity::simple::DeviceAdd;
     use crate::security::auth::Claims;
-    use crate::service::send_host_message;
     use crate::utils;
     use crate::utils::Response;
-    use actix_web::http::header::CONTENT_TYPE;
-    use actix_web::http::Method;
     use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
     use log::error;
-    use rumqttc::AsyncClient;
 
     pub async fn get_all_devices(req: HttpRequest, db: web::Data<DataBase>) -> HttpResponse {
         let e = req.extensions();
@@ -78,10 +74,10 @@ pub mod root {
         use crate::db::DataBase;
         use crate::dto::http::request::DeviceUpdate;
         use crate::security::auth::Claims;
+        use crate::utils;
         use crate::utils::Response;
         use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
         use log::error;
-        use crate::utils;
 
         pub async fn get_device_info(
             req: HttpRequest,
@@ -149,32 +145,35 @@ pub mod root {
             use crate::db::Memory;
             use crate::utils::Response;
             use actix_web::{web, HttpResponse};
-            use log::info;
+            use log::{error, info};
 
             pub async fn get_device_status(
                 path: web::Path<i32>,
                 memory: web::Data<Memory>,
             ) -> HttpResponse {
                 info!("get_device_status {}", path.clone());
-                match memory.device_state.status(path.into_inner()).await {
-                    Some(v) => HttpResponse::Ok().json(Response::success(v)),
-                    None => HttpResponse::NotFound().finish(),
+                match memory.get_device_status(path.into_inner()).await {
+                    Ok(v) => {
+                        HttpResponse::Ok().json(Response::success(v))
+                    }
+                    Err(e) => {
+                        error!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                    }
                 }
             }
         }
 
         pub mod service {
             use crate::db::DataBase;
+            use crate::dto::mqtt::HostToDeviceMessage;
             use crate::security::auth::Claims;
             use crate::service::send_host_message;
             use crate::utils;
-            use actix_web::http::header::CONTENT_TYPE;
-            use actix_web::http::Method;
-            use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
             use actix_web::web::Payload;
+            use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
             use log::{error, info};
             use rumqttc::AsyncClient;
-            use crate::dto::mqtt::HostToDeviceMessage;
 
             pub async fn execute_device_service(
                 req: HttpRequest,

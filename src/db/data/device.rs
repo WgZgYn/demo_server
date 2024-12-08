@@ -109,7 +109,7 @@ impl Session {
         ).await
     }
 
-    pub async fn get_device_status(&self, device_id: i32) -> Result<String, Error> {
+    pub async fn get_device_status(&self, device_id: i32) -> Result<Value, Error> {
         self.0.query_one("SELECT status FROM device_status WHERE device_id = $1", &[&device_id])
             .await.map(|row| row.get(0))
     }

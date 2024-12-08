@@ -1,13 +1,13 @@
-use crate::service::event::{Action, Scene, Trigger};
-use log::{debug, error, info};
-use rumqttc::{AsyncClient, ClientError, QoS};
-use std::collections::{HashMap, VecDeque};
-use actix_web::web;
-use tokio::sync::RwLock;
 use crate::data::sse::SseHandler;
 use crate::db::{CachedDataBase, DataBase};
 use crate::dto::mqtt::{DeviceMessage, HostToDeviceMessage};
+use crate::service::event::{Action, Scene, Trigger};
 use crate::service::execute_action;
+use actix_web::web;
+use log::{debug, error, info};
+use rumqttc::{AsyncClient, ClientError, QoS};
+use std::collections::{HashMap, VecDeque};
+use tokio::sync::RwLock;
 
 #[derive(Debug, Default)]
 pub struct DeviceState {
@@ -87,6 +87,16 @@ impl Memory {
             }
         }
         Ok(())
+    }
+
+    pub async fn get_device_status(&self, device_id: i32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let status = self.device_state.status(device_id).await;
+        if let Some(status) = status {
+            return Ok(status);
+        }
+        let session = self.db.get_session().await?;
+        let value = session.get_device_status(device_id).await?;
+        Ok(value)
     }
 }
 
